@@ -123,4 +123,5 @@ solve(prob, TRBDF2())
 ## Similar Projects
 
 [AutoPreallocation.jl](https://github.com/oxinabox/AutoPreallocation.jl) tries
-to do this automatically at the compiler level.
+to do this automatically at the compiler level. [Alloc.jl](https://github.com/FluxML/Alloc.jl)
+tries to do this with a bump allocator.
