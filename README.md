@@ -90,6 +90,105 @@ prob = ODEProblem(foo, ones(5, 5), (0., 1.0), (ones(5,5), dualcache(zeros(5,5)))
 solve(prob, TRBDF2())
 ```
 
+### Handling Chunk Sizes
+
+It is important that the `DiffCache` matches the chunk sizes used in the actual differentiation. Let's
+understand this by looking at a real problem:
+
+```julia
+using ForwardDiff
+using PreallocationTools
+
+randmat = rand(10, 2)
+sto = similar(randmat)
+stod = dualcache(sto)
+
+function claytonsample!(sto, τ; randmat=randmat)
+    sto = get_tmp(sto, τ)
+    @show typeof(τ)
+    @show size(sto), size(randmat)
+    sto .= randmat
+    τ == 0 && return sto
+
+    n = size(sto, 1)
+    for i in 1:n
+        v = sto[i, 2]
+        u = sto[i, 1]
+        sto[i, 2] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)
+    end
+    return sto
+end
+
+ForwardDiff.derivative(τ -> claytonsample!(stod, τ), 0.3)
+```
+
+Notice that by default the `dualcache` builds a cache that is compatible with differentiation w.r.t the
+a variable sized as the cache variable, i.e. it's naturally made for Jacobians.
+
+```julia
+julia> typeof(dualcache(sto))
+PreallocationTools.DiffCache{Matrix{Float64}, Matrix{ForwardDiff.Dual{nothing, Float64, 10}}}
+```
+
+Notice that it choose a chunk size of 10, matching the chunk size that would be used if `ForwardDiff.jacobian` is used
+to calculate the derivative w.r.t. an input matching the size of `sto` (i.e., the Jacobian of `claytonsample!` w.r.t. `randmat`).
+However, in our actual differentiation we have:
+
+```julia
+typeof(τ) = ForwardDiff.Dual{ForwardDiff.Tag{var"#49#50", Float64}, Float64, 1}
+```
+
+a single chunk size because it's differentiating w.r.t. a single dimension. This messes with the sizes in the reinterpretation:
+
+```julia
+(size(sto), size(randmat)) = ((55, 2), (10, 2))
+```
+
+The fix is to ensure that the cache is generated with the correct chunk size, i.e.:
+
+```julia
+stod = dualcache(sto,Val{1})
+```
+
+Thus the following code successfully computes the derivative in a non-allocating way:
+
+```julia
+using ForwardDiff
+using PreallocationTools
+
+randmat = rand(10, 2)
+sto = similar(randmat)
+stod = dualcache(sto,Val{1})
+
+function claytonsample!(sto, τ; randmat=randmat)
+    sto = get_tmp(sto, τ)
+    sto .= randmat
+    τ == 0 && return sto
+
+    n = size(sto, 1)
+    for i in 1:n
+        v = sto[i, 2]
+        u = sto[i, 1]
+        sto[i, 2] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)
+    end
+    return sto
+end
+
+ForwardDiff.derivative(τ -> claytonsample!(stod, τ), 0.3)
+
+10×2 Matrix{Float64}:
+ 0.0   0.171602
+ 0.0  -0.412736
+ 0.0   0.149273
+ 0.0   0.18172
+ 0.0   0.144151
+ 0.0  -0.110773
+ 0.0   0.221714
+ 0.0  -0.111034
+ 0.0  -0.0723283
+ 0.0   0.251095
+```
+
 ## LazyBufferCache
 
 ```julia
@@ -104,7 +203,9 @@ vectors of the same length.
 Note that `LazyBufferCache` does cause a dynamic dispatch, though it is type-stable.
 This gives it a ~100ns overhead, and thus on very small problems it can reduce
 performance, but for any sufficiently sized calculation (e.g. >20 ODEs) this
-may not be even measurable.
+may not be even measurable. The upside of `LazyBufferCache` is that the user does
+not have to worry about potential issues with chunk sizes and such: `LazyBufferCache`
+is much easier!
 
 ### Example
 
