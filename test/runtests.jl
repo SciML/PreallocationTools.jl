@@ -1,4 +1,4 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools
+using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, ForwardDiff
 
 function foo(du, u, (A, tmp), t)
     tmp = get_tmp(tmp, u)
