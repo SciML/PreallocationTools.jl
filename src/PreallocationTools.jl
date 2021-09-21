@@ -23,17 +23,34 @@ forward-mode automatic differentiation.
 """
 dualcache(u::AbstractArray, N=Val{ForwardDiff.pickchunksize(length(u))}) = DiffCache(u, size(u), N)
 
+chunksize(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N} = N
+
 function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
   x = reinterpret(T, dc.dual_du)
+  if chunksize(T) === chunksize(eltype(dc.dual_du))
+      x
+  else
+      @view x[axes(dc.du)...]
+  end
 end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
   x = reinterpret(T, dc.dual_du)
+  if chunksize(T) === chunksize(eltype(dc.dual_du))
+      x
+  else
+      @view x[axes(dc.du)...]
+  end
 end
 
 function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N,D,Syms}
   x = reinterpret(T, dc.dual_du.__x)
-  LabelledArrays.LArray{T,N,D,Syms}(x)
+  _x = if chunksize(T) === chunksize(eltype(dc.dual_du))
+      x
+  else
+      @view x[axes(dc.du)...]
+  end
+  LabelledArrays.LArray{T,N,D,Syms}(_x)
 end
 
 get_tmp(dc::DiffCache, u::Number) = dc.du
