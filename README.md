@@ -45,7 +45,31 @@ In a differential equation, optimization, etc., the default chunk size is comput
 from the state vector `u`, and thus if one creates the `dualcache` via
 `dualcache(u)` it will match the default chunking of the solver libraries.
 
-### Example
+### dualcache Example 1: Direct Usage
+
+```julia
+randmat = rand(10, 2)
+sto = similar(randmat)
+stod = dualcache(sto)
+
+function claytonsample!(sto, τ; randmat=randmat)
+    sto = get_tmp(sto, τ)
+    sto .= randmat
+    τ == 0 && return sto
+
+    n = size(sto, 1)
+    for i in 1:n
+        v = sto[i, 2]
+        u = sto[i, 1]
+        sto[i, 2] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)
+    end
+    return sto
+end
+
+ForwardDiff.derivative(τ -> claytonsample!(stod, τ), 0.3)
+```
+
+### dualcache Example 2: ODEs
 
 ```julia
 using LinearAlgebra, OrdinaryDiffEq
