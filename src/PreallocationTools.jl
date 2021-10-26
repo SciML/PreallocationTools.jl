@@ -2,13 +2,15 @@ module PreallocationTools
 
 using ForwardDiff, ArrayInterface, LabelledArrays
 
-struct DiffCache{T<:AbstractArray, S<:AbstractArray}
+struct DiffCache{T<:AbstractArray,S<:AbstractArray}
     du::T
     dual_du::S
 end
 
+#= removed dependency on ArrayInterface, because it seemed not necessary anymore; 
+not sure whether it breaks things that are not in the testset; needs checking. =#
 function DiffCache(u::AbstractArray{T}, siz, ::Type{Val{chunk_size}}) where {T, chunk_size}
-    x = ArrayInterface.restructure(u,zeros(ForwardDiff.Dual{nothing,T,chunk_size}, siz...))
+    x = zeros(T,(chunk_size+1)*prod(siz)) 
     DiffCache(u, x)
 end
 
@@ -16,41 +18,33 @@ end
 
 `dualcache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
 
-Builds a `DualCache` object that stores both a version of the cache for `u`
-and for the `Dual` version of `u`, allowing use of pre-cached vectors with
+Builds a `DualCache` object that stores versions of the cache for `u` and for the `Dual` version of `u` allowing use of pre-cached arrays with
 forward-mode automatic differentiation.
 
 """
 dualcache(u::AbstractArray, N=Val{ForwardDiff.pickchunksize(length(u))}) = DiffCache(u, size(u), N)
 
-chunksize(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N} = N
+"""
 
+`get_tmp(dc::DiffCache, u)`
+
+Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`. 
+
+"""
 function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
-  x = reinterpret(T, dc.dual_du)
-  if chunksize(T) === chunksize(eltype(dc.dual_du))
-      x
-  else
-      @view x[axes(dc.du)...]
-  end
+  nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
+  reshape(reinterpret(T, view(dc.dual_du, 1:nelem)), size(dc.du))
 end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
-  x = reinterpret(T, dc.dual_du)
-  if chunksize(T) === chunksize(eltype(dc.dual_du))
-      x
-  else
-      @view x[axes(dc.du)...]
-  end
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
+    reshape(reinterpret(T, view(dc.dual_du, 1:nelem)), size(dc.du))
 end
 
 function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N,D,Syms}
-  x = reinterpret(T, dc.dual_du.__x)
-  _x = if chunksize(T) === chunksize(eltype(dc.dual_du))
-      x
-  else
-      @view x[axes(dc.du)...]
-  end
-  LabelledArrays.LArray{T,N,D,Syms}(_x)
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
+    _x = reshape(reinterpret(T, view(dc.dual_du, 1:nelem)), size(dc.du))
+    LabelledArrays.LArray{T,N,D,Syms}(_x)
 end
 
 get_tmp(dc::DiffCache, u::Number) = dc.du
@@ -62,6 +56,7 @@ get_tmp(dc::DiffCache, u::AbstractArray) = dc.du
 A lazily allocated buffer object.  Given a vector `u`, `b[u]` returns a `Vector` of the
 same element type and length `f(length(u))` (defaulting to the same length), which is
 allocated as needed and then cached within `b` for subsequent usage.
+
 """
 struct LazyBufferCache{F<:Function}
     bufs::Dict # a dictionary mapping types to buffers
