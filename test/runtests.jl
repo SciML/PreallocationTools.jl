@@ -54,12 +54,12 @@ function claytonsample!(sto, τ, α; randmat=randmat)
     τ == 0 && return sto
 
     n = size(sto, 1)
-    println(size(sto))
-    v = @view sto[:, 2]
-    u = @view sto[:, 1]
-    sto[i, 1] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)*α
-    sto[i, 2] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)
-
+    for i in 1:n
+        v = sto[i, 2]
+        u = sto[i, 1]
+        sto[i, 1] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)*α
+        sto[i, 2] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)
+    end
     return sto
 end
 
