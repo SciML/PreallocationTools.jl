@@ -1,8 +1,8 @@
 module PreallocationTools
 
-using ForwardDiff, ArrayInterface, LabelledArrays
+using ForwardDiff, LabelledArrays
 
-struct DiffCache{T<:AbstractArray,S<:AbstractArray}
+struct DiffCache{T<:AbstractArray, S<:AbstractArray}
     du::T
     dual_du::S
 end
