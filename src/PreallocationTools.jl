@@ -7,10 +7,14 @@ struct DiffCache{T<:AbstractArray, S<:AbstractArray}
     dual_du::S
 end
 
-#= removed dependency on ArrayInterface, because it seemed not necessary anymore; 
-not sure whether it breaks things that are not in the testset; needs checking. =#
-function DiffCache(u::AbstractArray{T}, siz, ::Type{Val{chunk_size}}) where {T, chunk_size}
+function DiffCache(u::AbstractArray{T}, siz, chunk_size::V) where {T,V<:Int}
     x = zeros(T,(chunk_size+1)*prod(siz)) 
+    DiffCache(u, x)
+end
+
+function DiffCache(u::AbstractArray{T}, siz, chunk_sizes::AbstractArray{V}) where {T,V<:Int}
+    clamp!(chunk_sizes,1,ForwardDiff.DEFAULT_CHUNK_THRESHOLD) 
+    x = zeros(T,prod(chunk_sizes.+1)*prod(siz)) 
     DiffCache(u, x)
 end
 
@@ -22,7 +26,7 @@ Builds a `DualCache` object that stores versions of the cache for `u` and for th
 forward-mode automatic differentiation.
 
 """
-dualcache(u::AbstractArray, N=Val{ForwardDiff.pickchunksize(length(u))}) = DiffCache(u, size(u), N)
+dualcache(u::AbstractArray, N=ForwardDiff.pickchunksize(length(u))) = DiffCache(u, size(u), N)
 
 """
 
