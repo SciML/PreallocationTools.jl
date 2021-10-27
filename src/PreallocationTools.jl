@@ -1,6 +1,6 @@
 module PreallocationTools
 
-using ForwardDiff, LabelledArrays
+using ForwardDiff, ArrayInterface, LabelledArrays
 
 struct DiffCache{T<:AbstractArray, S<:AbstractArray}
     du::T
@@ -22,7 +22,8 @@ end
 
 `dualcache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
 
-Builds a `DualCache` object that stores versions of the cache for `u` and for the `Dual` version of `u` allowing use of pre-cached arrays with
+Builds a `DualCache` object that stores both a version of the cache for `u`
+and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 
 """
@@ -37,17 +38,17 @@ Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`
 """
 function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
   nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
-  reshape(reinterpret(T, view(dc.dual_du, 1:nelem)), size(dc.du))
+  ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
-    reshape(reinterpret(T, view(dc.dual_du, 1:nelem)), size(dc.du))
+    ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N,D,Syms}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
-    _x = reshape(reinterpret(T, view(dc.dual_du, 1:nelem)), size(dc.du))
+    _x = ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
     LabelledArrays.LArray{T,N,D,Syms}(_x)
 end
 
