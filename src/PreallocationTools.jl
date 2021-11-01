@@ -7,21 +7,21 @@ struct DiffCache{T<:AbstractArray, S<:AbstractArray}
     dual_du::S
 end
 
-function DiffCache(u::AbstractArray{T}, siz, ::Type{Val{chunk_size}}) where {T, chunk_size}
+function DiffCache(u::AbstractArray{T}, siz, chunk_size) where {T}
     x = adapt(ArrayInterface.parameterless_type(u), zeros(T,(chunk_size+1)*prod(siz)))
     DiffCache(u, x)
 end
 
 """
 
-`dualcache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
+`dualcache(u::AbstractArray, N = default_cache_size(length(u)))`
 
 Builds a `DualCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 
 """
-dualcache(u::AbstractArray, N=Val{ForwardDiff.pickchunksize(length(u))}) = DiffCache(u, size(u), N)
+dualcache(u::AbstractArray, N=ForwardDiff.pickchunksize(length(u)) = DiffCache(u, size(u), N)
 
 """
 
