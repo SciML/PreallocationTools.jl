@@ -8,7 +8,6 @@ struct DiffCache{T<:AbstractArray, S<:AbstractArray}
 end
 
 function DiffCache(u::AbstractArray{T}, siz, ::Type{Val{chunk_size}}) where {T, chunk_size}
-    println(T)
     x = adapt(ArrayInterface.parameterless_type(u), zeros(T,(chunk_size+1)*prod(siz)))
     DiffCache(u, x)
 end
