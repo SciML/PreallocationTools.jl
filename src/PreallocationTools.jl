@@ -1,6 +1,6 @@
 module PreallocationTools
 
-using ForwardDiff, ArrayInterface, LabelledArrays
+using ForwardDiff, ArrayInterface, LabelledArrays, Adapt
 
 struct DiffCache{T<:AbstractArray, S<:AbstractArray}
     du::T
@@ -8,7 +8,8 @@ struct DiffCache{T<:AbstractArray, S<:AbstractArray}
 end
 
 function DiffCache(u::AbstractArray{T}, siz, ::Type{Val{chunk_size}}) where {T, chunk_size}
-    x = zeros(T,(chunk_size+1)*prod(siz))  
+    println(T)
+    x = adapt(ArrayInterface.parameterless_type(u), zeros(T,(chunk_size+1)*prod(siz)))
     DiffCache(u, x)
 end
 
@@ -31,17 +32,17 @@ Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`
 
 """
 function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
-  nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
-  ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
+    ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
     ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N,D,Syms}
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
     _x = ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
     LabelledArrays.LArray{T,N,D,Syms}(_x)
 end
