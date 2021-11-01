@@ -21,7 +21,7 @@ and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 
 """
-dualcache(u::AbstractArray, N=ForwardDiff.pickchunksize(length(u)) = DiffCache(u, size(u), N)
+dualcache(u::AbstractArray, N=ForwardDiff.pickchunksize(length(u))) = DiffCache(u, size(u), N)
 
 """
 
