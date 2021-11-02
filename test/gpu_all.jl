@@ -1,4 +1,4 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff
+using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff, ArrayInterface
 
 #Dispatch tests
 chunk_size = 5
@@ -10,7 +10,7 @@ tmp_du_CUA = get_tmp(cache_CU, u0_CU)
 tmp_dual_du_CUA = get_tmp(cache_CU, dual_CU)
 tmp_du_CUN = get_tmp(cache_CU, 0.0)
 tmp_dual_du_CUN = get_tmp(cache_CU, dual_N)
-@test typeof(cache_CU.dual_du) == typeof(u0_CU) #check that dual cache array is a GPU array for performance reasons.
+@test ArrayInterface.parameterless_type(typeof(cache_CU.dual_du)) == ArrayInterface.parameterless_type(typeof(u0_CU)) #check that dual cache array is a GPU array for performance reasons.
 @test size(tmp_du_CUA) == size(u0_CU)                
 @test typeof(tmp_du_CUA) == typeof(u0_CU)
 @test eltype(tmp_du_CUA) == eltype(u0_CU)
@@ -35,7 +35,7 @@ end
 chunk_size = 10
 u0 = cu(rand(10,10)) #example kept small for test purposes.
 A  = cu(-randn(10,10))                  
-cache = dualcache(A, chunk_size)
+cache = dualcache(cu(zeros(10,10)), chunk_size)
 prob = ODEProblem(foo, u0, (0.0f0,1.0f0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == :Success
