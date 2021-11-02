@@ -1,4 +1,4 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA
+using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff
 
 #Dispatch tests
 u0_CU = cu(ones(5,5))
