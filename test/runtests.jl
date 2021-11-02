@@ -1,6 +1,5 @@
 using Pkg
 using SafeTestsets
-const LONGER_TESTS = false
 
 const GROUP = get(ENV, "GROUP", "All")
 const is_APPVEYOR = Sys.iswindows() && haskey(ENV,"APPVEYOR")
