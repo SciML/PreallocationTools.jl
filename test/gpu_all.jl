@@ -56,7 +56,6 @@ function claytonsample!(sto, τ, α; randmat=randmat)
     sto = get_tmp(sto, τ)
     sto .= randmat
     τ == 0 && return sto
-    n = size(sto, 1)
     v = @view sto[:, 2]
     u = @view sto[:, 1]
     @. v = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)*α
