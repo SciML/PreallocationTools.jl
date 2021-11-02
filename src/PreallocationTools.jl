@@ -22,7 +22,7 @@ and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation. Supports nested AD.
 
 """
-dualcache(u::AbstractArray, N::Int=ForwardDiff.pickchunksize(length(u)); levels::Int = 1) = DiffCache(u, size(u), N^levels)
+dualcache(u::AbstractArray, N::Int=ForwardDiff.pickchunksize(length(u)); levels::Int = 1) = DiffCache(u, size(u), N*ones(Int, levels))
 dualcache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
 
 """
