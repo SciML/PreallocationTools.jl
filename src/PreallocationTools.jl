@@ -14,7 +14,7 @@ end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes::AbstractArray{V}) where {T,V<:Int}
     clamp!(chunk_sizes,1,ForwardDiff.DEFAULT_CHUNK_THRESHOLD) 
-    x = zeros(T,prod(chunk_sizes.+1)*prod(siz)) adapt(ArrayInterface.parameterless_type(u), zeros(T, (chunk_sizes .+ 1)*prod(siz)))
+    x = adapt(ArrayInterface.parameterless_type(u), zeros(T, prod(chunk_sizes .+ 1)*prod(siz)))
     DiffCache(u, x)
 end
 

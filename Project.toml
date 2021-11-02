@@ -16,11 +16,14 @@ LabelledArrays = "1"
 julia = "1.6"
 
 [extras]
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+GalacticOptim = "a75be94c-b780-496d-a8a9-0878b188d577"
 
 [targets]
-test = ["LinearAlgebra", "OrdinaryDiffEq", "Test", "CUDA", "RecursiveArrayTools"]
+test = ["LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "GalacticOptim", "Optim"]
