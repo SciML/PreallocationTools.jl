@@ -4,11 +4,12 @@ using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff
 chunk_size = 5
 u0_CU = cu(ones(5,5))
 dual_CU = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32, chunk_size}, 2, 2))
+dual_N = ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32, 5}(0)
 cache_CU = dualcache(u0_CU, chunk_size)
 tmp_du_CUA = get_tmp(cache_CU, u0_CU)
 tmp_dual_du_CUA = get_tmp(cache_CU, dual_CU)
-tmp_du_CUN = get_tmp(cache_CU, u0_CU[1])
-tmp_dual_du_CUN = get_tmp(cache_CU, dual_CU[1])
+tmp_du_CUN = get_tmp(cache_CU, 0.0)
+tmp_dual_du_CUN = get_tmp(cache_CU, dual_N)
 @test typeof(cache_CU.dual_du) == typeof(u0_CU) #check that dual cache array is a GPU array for performance reasons.
 @test size(tmp_du_CUA) == size(u0_CU)                
 @test typeof(tmp_du_CUA) == typeof(u0_CU)
