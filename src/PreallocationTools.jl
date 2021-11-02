@@ -1,26 +1,26 @@
 module PreallocationTools
 
-using ForwardDiff, ArrayInterface, LabelledArrays
+using ForwardDiff, ArrayInterface, LabelledArrays, Adapt
 
 struct DiffCache{T<:AbstractArray, S<:AbstractArray}
     du::T
     dual_du::S
 end
 
-function DiffCache(u::AbstractArray{T}, siz, chunk_size::V) where {T,V<:Int}
-    x = zeros(T,(chunk_size+1)*prod(siz)) 
+function DiffCache(u::AbstractArray{T}, siz, chunk_size::Int) where {T}
+    x = adapt(ArrayInterface.parameterless_type(u), zeros(T, (chunk_size+1)*prod(siz)))
     DiffCache(u, x)
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes::AbstractArray{V}) where {T,V<:Int}
     clamp!(chunk_sizes,1,ForwardDiff.DEFAULT_CHUNK_THRESHOLD) 
-    x = zeros(T,prod(chunk_sizes.+1)*prod(siz)) 
+    x = zeros(T,prod(chunk_sizes.+1)*prod(siz)) adapt(ArrayInterface.parameterless_type(u), zeros(T, (chunk_sizes .+ 1)*prod(siz)))
     DiffCache(u, x)
 end
 
 """
 
-`dualcache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
+`dualcache(u::AbstractArray, N = default_cache_size(length(u)))`
 
 Builds a `DualCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
@@ -37,17 +37,17 @@ Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`
 
 """
 function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
-  nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
-  ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
+    ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
     ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N,D,Syms}
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*prod(size(dc.du))
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
     _x = ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
     LabelledArrays.LArray{T,N,D,Syms}(_x)
 end
