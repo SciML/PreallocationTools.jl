@@ -1,4 +1,4 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA
+using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff
 
 #Dispatch tests
 chunk_size = 5
