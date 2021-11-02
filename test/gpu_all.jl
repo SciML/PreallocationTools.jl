@@ -1,5 +1,6 @@
 using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff
 
+chunk_size = 5
 #Dispatch tests
 u0_CU = cu(ones(5,5))
 dual_CU = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64, chunk_size}, 2, 2))
