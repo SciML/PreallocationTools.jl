@@ -42,9 +42,9 @@ function foo(du, u, p, t)
     nothing
 end
 
-ps = 2 #use to specify problem size (ps ∈ {1,2})
-coeffs = rand(ps^2)
-cache = dualcache(zeros(ps,ps), [4, 4, 4])
+ps = 3 #use to specify problem size; don't go crazy on this, because compilation time...
+coeffs = -rand(ps^2)
+cache = dualcache(zeros(ps,ps), [9, 9, 9])
 prob = ODEProblem(foo, ones(ps, ps), (0., 1.0), (coeffs, cache))
 realsol = solve(prob, TRBDF2(), saveat = 0.0:0.01:1.0, reltol = 1e-8)
 
@@ -66,7 +66,7 @@ fn(x,p) = objfun(x, p[1], p[2], p[3])
 optfun = OptimizationFunction(fn, GalacticOptim.AutoForwardDiff())
 optprob = OptimizationProblem(optfun, rand(size(coeffs)...), (prob, realsol, cache))
 newtonsol = solve(optprob, Newton())
-bfgssol = solve(optprob, BFGS()) #since only gradients are used here, we could go with a slim dualcache(zeros(ps,ps), [4,4]) as well.
+bfgssol = solve(optprob, BFGS()) #since only gradients are used here, we could go with a smaller dualcache(zeros(ps,ps), [9,9]) as well.
 
 @test all(abs.(coeffs .- newtonsol.u) .< 1e-3)
 @test all(abs.(coeffs .- bfgssol.u) .< 1e-3)
@@ -81,7 +81,6 @@ function foo(du, u, p, t)
     nothing
 end
 
-ps = 2 #use to specify problem size (ps ∈ {1,2})
 coeffs = rand(1)
 cache = dualcache(zeros(ps,ps), [1, 1, 4])
 prob = ODEProblem(foo, ones(ps, ps), (0., 1.0), (coeffs, cache))
