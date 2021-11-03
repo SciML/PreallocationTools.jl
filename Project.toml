@@ -1,7 +1,7 @@
 name = "PreallocationTools"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "0.1.1"
+version = "0.2.0"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -10,6 +10,7 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
 
 [compat]
+Adapt = "3"
 ArrayInterface = "2.6, 3.0"
 ForwardDiff = "0.10.3"
 LabelledArrays = "1"

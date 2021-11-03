@@ -1,5 +1,6 @@
 using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff, ArrayInterface
 
+chunk_size = 5
 #Dispatch tests
 chunk_size = 5
 u0_CU = cu(ones(5,5))
