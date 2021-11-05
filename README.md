@@ -173,7 +173,7 @@ solve(optprob, Newton())
 ```
 Solves an optimization problem for the coefficients, `coeffs`, appearing in a differential equation.
 The optimization is done with [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl)'s `Newton()` 
-algorithm. Since this involves automatic differentiation using in the ODE solver and the calculation 
+algorithm. Since this involves automatic differentiation in the ODE solver and the calculation 
 of Hessians, three automatic differentiations are nested within each other. Therefore, the `dualcache` 
 is specified with `levels = 3`. 
 
