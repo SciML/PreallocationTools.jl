@@ -175,7 +175,7 @@ Solves an optimization problem for the coefficients, `coeffs`, appearing in a di
 The optimization is done with [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl)'s `Newton()` 
 algorithm. Since this involves automatic differentiation using in the ODE solver and the calculation 
 of Hessians, three automatic differentiations are nested within each other. Therefore, the `dualcache` 
-is is specified with `levels = 3`. 
+is specified with `levels = 3`. 
 
 ## LazyBufferCache
 
