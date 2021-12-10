@@ -35,22 +35,40 @@ Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`
 """
 function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
+    if nelem > length(dc.dual_du)
+        enlargedualcache!(dc, nelem)
+    end
     ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
+    if nelem > length(dc.dual_du)
+        enlargedualcache!(dc, nelem)
+    end
     ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N,D,Syms}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
+    if nelem > length(dc.dual_du)
+        enlargedualcache!(dc, nelem)
+    end
     _x = ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
     LabelledArrays.LArray{T,N,D,Syms}(_x)
 end
 
 get_tmp(dc::DiffCache, u::Number) = dc.du
 get_tmp(dc::DiffCache, u::AbstractArray) = dc.du
+
+function enlargedualcache!(dc, nelem) #warning comes only once per dualcache.
+    chunksize = div(nelem, length(dc.du)) - 1
+    @warn "The supplied dualcache was too small and was enlarged. This incurrs allocations 
+    on the first call to get_tmp. If few calls to get_tmp occur and optimal performance is essential,
+    consider changing 'N'/chunk size of this dualcache to $chunksize."
+    resize!(dc.dual_du, nelem)
+end
+
 
 """
     b = LazyBufferCache(f=identity)
