@@ -1,5 +1,7 @@
-using Test, PreallocationTools, ForwardDiff
+using Test, PreallocationTools, ForwardDiff, LinearAlgebra
 
+
+#test for downsizing cache
 randmat = rand(5, 3)
 sto = similar(randmat)
 stod = dualcache(sto)
@@ -29,3 +31,25 @@ df2 = ForwardDiff.jacobian(x -> claytonsample!(stod, x[1], x[2]), [0.3; 0.0]) #s
 
 @test (length(randmat), 2) == size(df2)
 @test df1[1:5,2] ≈ df2[6:10,1]
+
+#test for enlarging cache
+function rhs!(du, u, p, t)
+    A = p
+    mul!(du, A, u)
+end
+
+function loss(du, u, p, t)
+    _du = get_tmp(du, p)
+    rhs!(_du, u, p, t)
+    l = _du[1]
+    return l
+end
+
+u = [3.0, 0.0]
+A = ones(2,2)
+
+du = similar(u)
+_du = dualcache(du)
+f = A -> loss(_du, u, A, 0.0)
+analyticalsolution = [3.0 0; 0 0]
+@test ForwardDiff.gradient(f, A) ≈ analyticalsolution
