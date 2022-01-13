@@ -25,6 +25,7 @@ or specifying an array of chunk_sizes.
 """
 dualcache(u::AbstractArray, N::Int=ForwardDiff.pickchunksize(length(u)); levels::Int = 1) = DiffCache(u, size(u), N*ones(Int, levels))
 dualcache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
+dualcache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where N = dualcache(u,N;levels)
 dualcache(u::AbstractArray, ::Val{N}; levels::Int = 1) where N = dualcache(u,N;levels)
 
 """
