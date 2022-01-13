@@ -25,12 +25,13 @@ or specifying an array of chunk_sizes.
 """
 dualcache(u::AbstractArray, N::Int=ForwardDiff.pickchunksize(length(u)); levels::Int = 1) = DiffCache(u, size(u), N*ones(Int, levels))
 dualcache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
+dualcache(u::AbstractArray, ::Val{N}; levels::Int = 1) where N = dualcache(u,N;levels)
 
 """
 
 `get_tmp(dc::DiffCache, u)`
 
-Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`. 
+Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`.
 
 """
 function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
@@ -63,7 +64,7 @@ get_tmp(dc::DiffCache, u::AbstractArray) = dc.du
 
 function enlargedualcache!(dc, nelem) #warning comes only once per dualcache.
     chunksize = div(nelem, length(dc.du)) - 1
-    @warn "The supplied dualcache was too small and was enlarged. This incurrs allocations 
+    @warn "The supplied dualcache was too small and was enlarged. This incurrs allocations
     on the first call to get_tmp. If few calls to get_tmp occur and optimal performance is essential,
     consider changing 'N'/chunk size of this dualcache to $chunksize."
     resize!(dc.dual_du, nelem)
