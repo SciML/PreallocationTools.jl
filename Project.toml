@@ -11,7 +11,7 @@ LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
 
 [compat]
 Adapt = "3"
-ArrayInterface = "2.6, 3.0"
+ArrayInterface = "4.0"
 ForwardDiff = "0.10.3"
 LabelledArrays = "1"
 julia = "1.6"
