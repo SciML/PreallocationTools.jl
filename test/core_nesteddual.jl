@@ -1,4 +1,4 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, ForwardDiff, GalacticOptim, Optim
+using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, ForwardDiff, GalacticOptim, GalacticOptimJL
 
 randmat = rand(5, 3)
 sto = similar(randmat)
