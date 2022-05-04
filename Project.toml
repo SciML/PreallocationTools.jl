@@ -23,8 +23,8 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 GalacticOptim = "a75be94c-b780-496d-a8a9-0878b188d577"
+GalacticOptimJL = "9d3c5eb1-403b-401b-8c0f-c11105342e6b"
 
 [targets]
-test = ["LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "GalacticOptim", "Optim"]
+test = ["LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "GalacticOptim", "GalacticOptimJL"]
