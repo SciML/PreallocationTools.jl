@@ -87,13 +87,12 @@ struct LazyBufferCache{F<:Function}
 end
 
 # override the [] method
-function Base.getindex(b::LazyBufferCache, u::AbstractArray{T}) where {T}
+function Base.getindex(b::LazyBufferCache, u::T) where {T<:AbstractArray}
     n = b.lengthmap(size(u)) # required buffer length
-    buf = get!(b.bufs, T) do
-        similar(u, T, n) # buffer to allocate if it was not found in b.bufs
-    end::typeof(u) # declare type since b.bufs dictionary is untyped
-    # Doesn't work well with matrices, needs more thought!
-    #return resize!(buf, n) # resize the buffer if needed, e.g. if problem was resized
+    buf = get!(b.bufs, (T, n)) do
+        similar(u, n) # buffer to allocate if it was not found in b.bufs
+    end::T # declare type since b.bufs dictionary is untyped
+    return buf
 end
 
 export dualcache, get_tmp, LazyBufferCache
