@@ -75,25 +75,24 @@ end
 """
     b = LazyBufferCache(f=identity)
 
-A lazily allocated buffer object.  Given a vector `u`, `b[u]` returns a `Vector` of the
-same element type and length `f(length(u))` (defaulting to the same length), which is
-allocated as needed and then cached within `b` for subsequent usage.
+A lazily allocated buffer object.  Given an array `u`, `b[u]` returns an array of the
+same type and size `f(size(u))` (defaulting to the same size), which is allocated as
+needed and then cached within `b` for subsequent usage.
 
 """
 struct LazyBufferCache{F<:Function}
     bufs::Dict # a dictionary mapping types to buffers
-    lengthmap::F
-    LazyBufferCache(f::F=identity) where {F<:Function} = new{F}(Dict()) # start with empty dict
+    sizemap::F
+    LazyBufferCache(f::F=identity) where {F<:Function} = new{F}(Dict(), f) # start with empty dict
 end
 
 # override the [] method
-function Base.getindex(b::LazyBufferCache, u::AbstractArray{T}) where {T}
-    n = b.lengthmap(size(u)) # required buffer length
-    buf = get!(b.bufs, T) do
-        similar(u, T, n) # buffer to allocate if it was not found in b.bufs
-    end::typeof(u) # declare type since b.bufs dictionary is untyped
-    # Doesn't work well with matrices, needs more thought!
-    #return resize!(buf, n) # resize the buffer if needed, e.g. if problem was resized
+function Base.getindex(b::LazyBufferCache, u::T) where {T<:AbstractArray}
+    s = b.sizemap(size(u)) # required buffer size
+    buf = get!(b.bufs, (T, s)) do
+        similar(u, s) # buffer to allocate if it was not found in b.bufs
+    end::T # declare type since b.bufs dictionary is untyped
+    return buf
 end
 
 export dualcache, get_tmp, LazyBufferCache
