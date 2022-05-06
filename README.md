@@ -185,9 +185,8 @@ LazyBufferCache(f::F=identity)
 ```
 
 A `LazyBufferCache` is a `Dict`-like type for the caches which automatically defines
-new cache vectors on demand when they are required. The function `f` is a length
-map which maps `length_of_cache = f(length(u))`, which by default creates cache
-vectors of the same length.
+new cache arrays on demand when they are required. The function `f` maps
+`size_of_cache = f(size(u))`, which by default creates cache arrays of the same size.
 
 Note that `LazyBufferCache` does cause a dynamic dispatch, though it is type-stable.
 This gives it a ~100ns overhead, and thus on very small problems it can reduce
