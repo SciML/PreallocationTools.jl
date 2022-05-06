@@ -83,7 +83,7 @@ allocated as needed and then cached within `b` for subsequent usage.
 struct LazyBufferCache{F<:Function}
     bufs::Dict # a dictionary mapping types to buffers
     lengthmap::F
-    LazyBufferCache(f::F=identity) where {F<:Function} = new{F}(Dict()) # start with empty dict
+    LazyBufferCache(f::F=identity) where {F<:Function} = new{F}(Dict(), f) # start with empty dict
 end
 
 # override the [] method
