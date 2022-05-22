@@ -1,6 +1,6 @@
 module PreallocationTools
 
-using ForwardDiff, ArrayInterface, LabelledArrays, Adapt
+using ForwardDiff, ArrayInterfaceCore, LabelledArrays, Adapt
 
 struct DiffCache{T<:AbstractArray, S<:AbstractArray}
     du::T
@@ -8,7 +8,7 @@ struct DiffCache{T<:AbstractArray, S<:AbstractArray}
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
-    x = adapt(ArrayInterface.parameterless_type(u), zeros(T, prod(chunk_sizes .+ 1)*prod(siz)))
+    x = adapt(ArrayInterfaceCore.parameterless_type(u), zeros(T, prod(chunk_sizes .+ 1)*prod(siz)))
     DiffCache(u, x)
 end
 
@@ -40,7 +40,7 @@ function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
     end
-    ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+    ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
@@ -48,7 +48,7 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
     end
-    ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+    ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N,D,Syms}
@@ -56,7 +56,7 @@ function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
     end
-    _x = ArrayInterface.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+    _x = ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
     LabelledArrays.LArray{T,N,D,Syms}(_x)
 end
 
