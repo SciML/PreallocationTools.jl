@@ -140,7 +140,7 @@ solve(prob, TRBDF2())
 ### dualcache Example 3: Nested AD calls in an optimization problem involving a Hessian matrix
 
 ```julia
-using LinearAlgebra, OrdinaryDiffEq, PreallocationTools, Optim, GalacticOptim
+using LinearAlgebra, OrdinaryDiffEq, PreallocationTools, Optim, Optimization
 function foo(du, u, p, t)
     tmp = p[2]
     A = reshape(p[1], size(tmp.du))
@@ -168,7 +168,7 @@ function objfun(x, prob, realsol, cache)
     return ofv
 end
 fn(x,p) = objfun(x, p[1], p[2], p[3])
-optfun = OptimizationFunction(fn, GalacticOptim.AutoForwardDiff())
+optfun = OptimizationFunction(fn, Optimization.AutoForwardDiff())
 optprob = OptimizationProblem(optfun, zeros(length(coeffs)), (prob, realsol, cache))
 solve(optprob, Newton())
 ```
