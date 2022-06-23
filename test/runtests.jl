@@ -2,11 +2,11 @@ using Pkg
 using SafeTestsets
 
 const GROUP = get(ENV, "GROUP", "All")
-const is_APPVEYOR = Sys.iswindows() && haskey(ENV,"APPVEYOR")
+const is_APPVEYOR = Sys.iswindows() && haskey(ENV, "APPVEYOR")
 
 function activate_downstream_env()
     Pkg.activate("GPU")
-    Pkg.develop(PackageSpec(path=dirname(@__DIR__)))
+    Pkg.develop(PackageSpec(path = dirname(@__DIR__)))
     Pkg.instantiate()
 end
 
