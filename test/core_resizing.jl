@@ -1,12 +1,11 @@
 using Test, PreallocationTools, ForwardDiff, LinearAlgebra
 
-
 #test for downsizing cache
 randmat = rand(5, 3)
 sto = similar(randmat)
 stod = dualcache(sto)
 
-function claytonsample!(sto, τ, α; randmat=randmat)
+function claytonsample!(sto, τ, α; randmat = randmat)
     sto = get_tmp(sto, τ)
     sto .= randmat
     τ == 0 && return sto
@@ -15,8 +14,8 @@ function claytonsample!(sto, τ, α; randmat=randmat)
     for i in 1:n
         v = sto[i, 2]
         u = sto[i, 1]
-        sto[i, 1] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)*α
-        sto[i, 2] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)
+        sto[i, 1] = (1 - u^(-τ) + u^(-τ) * v^(-(τ / (1 + τ))))^(-1 / τ) * α
+        sto[i, 2] = (1 - u^(-τ) + u^(-τ) * v^(-(τ / (1 + τ))))^(-1 / τ)
     end
     return sto
 end
@@ -30,12 +29,12 @@ df2 = ForwardDiff.jacobian(x -> claytonsample!(stod, x[1], x[2]), [0.3; 0.0]) #s
 #because ForwardDiff flattens the output of jacobian, see: https://juliadiff.org/ForwardDiff.jl/stable/user/api/#ForwardDiff.jacobian
 
 @test (length(randmat), 2) == size(df2)
-@test df1[1:5,2] ≈ df2[6:10,1]
+@test df1[1:5, 2] ≈ df2[6:10, 1]
 
 #test for enlarging cache
 function rhs!(du, u, p, t)
     A = p
-    mul!(du, A, u)
+    return mul!(du, A, u)
 end
 
 function loss(du, u, p, t)
@@ -46,7 +45,7 @@ function loss(du, u, p, t)
 end
 
 u = [3.0, 0.0]
-A = ones(2,2)
+A = ones(2, 2)
 
 du = similar(u)
 _du = dualcache(du)
