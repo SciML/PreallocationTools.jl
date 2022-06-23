@@ -2,13 +2,14 @@ module PreallocationTools
 
 using ForwardDiff, ArrayInterfaceCore, LabelledArrays, Adapt
 
-struct DiffCache{T<:AbstractArray, S<:AbstractArray}
+struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
     dual_du::S
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
-    x = adapt(ArrayInterfaceCore.parameterless_type(u), zeros(T, prod(chunk_sizes .+ 1)*prod(siz)))
+    x = adapt(ArrayInterfaceCore.parameterless_type(u),
+              zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
     DiffCache(u, x)
 end
 
@@ -23,10 +24,15 @@ forward-mode automatic differentiation. Supports nested AD via keyword `levels`
 or specifying an array of chunk_sizes.
 
 """
-dualcache(u::AbstractArray, N::Int=ForwardDiff.pickchunksize(length(u)); levels::Int = 1) = DiffCache(u, size(u), N*ones(Int, levels))
+function dualcache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u));
+                   levels::Int = 1)
+    DiffCache(u, size(u), N * ones(Int, levels))
+end
 dualcache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
-dualcache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where N = dualcache(u,N;levels)
-dualcache(u::AbstractArray, ::Val{N}; levels::Int = 1) where N = dualcache(u,N;levels)
+function dualcache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where {N}
+    dualcache(u, N; levels)
+end
+dualcache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = dualcache(u, N; levels)
 
 """
 
@@ -35,29 +41,30 @@ dualcache(u::AbstractArray, ::Val{N}; levels::Int = 1) where N = dualcache(u,N;l
 Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`.
 
 """
-function get_tmp(dc::DiffCache, u::T) where T<:ForwardDiff.Dual
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
+function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
     end
     ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
-function get_tmp(dc::DiffCache, u::AbstractArray{T}) where T<:ForwardDiff.Dual
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
+function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
     end
     ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
-function get_tmp(dc::DiffCache, u::LabelledArrays.LArray{T,N,D,Syms}) where {T,N,D,Syms}
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du)))*length(dc.du)
+function get_tmp(dc::DiffCache,
+                 u::LabelledArrays.LArray{T, N, D, Syms}) where {T, N, D, Syms}
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
     end
     _x = ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
-    LabelledArrays.LArray{T,N,D,Syms}(_x)
+    LabelledArrays.LArray{T, N, D, Syms}(_x)
 end
 
 get_tmp(dc::DiffCache, u::Number) = dc.du
@@ -71,7 +78,6 @@ function enlargedualcache!(dc, nelem) #warning comes only once per dualcache.
     resize!(dc.dual_du, nelem)
 end
 
-
 """
     b = LazyBufferCache(f=identity)
 
@@ -80,14 +86,14 @@ same type and size `f(size(u))` (defaulting to the same size), which is allocate
 needed and then cached within `b` for subsequent usage.
 
 """
-struct LazyBufferCache{F<:Function}
+struct LazyBufferCache{F <: Function}
     bufs::Dict # a dictionary mapping types to buffers
     sizemap::F
-    LazyBufferCache(f::F=identity) where {F<:Function} = new{F}(Dict(), f) # start with empty dict
+    LazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
 
 # override the [] method
-function Base.getindex(b::LazyBufferCache, u::T) where {T<:AbstractArray}
+function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     s = b.sizemap(size(u)) # required buffer size
     buf = get!(b.bufs, (T, s)) do
         similar(u, s) # buffer to allocate if it was not found in b.bufs
