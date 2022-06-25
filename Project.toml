@@ -1,22 +1,21 @@
 name = "PreallocationTools"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "0.3.2"
+version = "0.4.0"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ArrayInterfaceCore = "30b0a656-2188-435a-8636-2ec0e6a096e2"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
 
 [compat]
 Adapt = "3"
 ArrayInterfaceCore = "0.1.1"
 ForwardDiff = "0.10.3"
-LabelledArrays = "1"
 julia = "1.6"
 
 [extras]
+LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
@@ -27,4 +26,4 @@ SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL"]
+test = ["LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL"]
