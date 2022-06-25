@@ -1,6 +1,6 @@
 module PreallocationTools
 
-using ForwardDiff, ArrayInterfaceCore, LabelledArrays, Adapt
+using ForwardDiff, ArrayInterfaceCore, Adapt
 
 struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
@@ -55,16 +55,6 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dua
         enlargedualcache!(dc, nelem)
     end
     ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
-end
-
-function get_tmp(dc::DiffCache,
-                 u::LabelledArrays.LArray{T, N, D, Syms}) where {T, N, D, Syms}
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
-    if nelem > length(dc.dual_du)
-        enlargedualcache!(dc, nelem)
-    end
-    _x = ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
-    LabelledArrays.LArray{T, N, D, Syms}(_x)
 end
 
 get_tmp(dc::DiffCache, u::Number) = dc.du
