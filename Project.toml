@@ -16,6 +16,7 @@ ForwardDiff = "0.10.3"
 julia = "1.6"
 
 [extras]
+FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
 LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
@@ -24,7 +25,9 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+SciMLSensitivity = "1ed8b502-d754-442c-8d5d-10ac956f44a1"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL"]
+test = ["FiniteDiff", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SciMLSensitivity", "Zygote"]

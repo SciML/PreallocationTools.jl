@@ -15,6 +15,7 @@ if GROUP == "All" || GROUP == "Core"
     @safetestset "ODE tests" begin include("core_odes.jl") end
     @safetestset "Resizing" begin include("core_resizing.jl") end
     @safetestset "Nested Duals" begin include("core_nesteddual.jl") end
+    @safetestset "ODE Sensitivity analysis" begin include("upstream/sensitivity_analysis.jl") end
 end
 
 if !is_APPVEYOR && GROUP == "GPU"
