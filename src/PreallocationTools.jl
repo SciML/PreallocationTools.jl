@@ -86,8 +86,16 @@ end
 function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     s = b.sizemap(size(u)) # required buffer size
     buf = get!(b.bufs, (T, s)) do
+        similar(u, s) # buffer to allocate if it was not found in b.bufs
+    end::T  # declare type since b.bufs dictionary is untyped
+    return buf
+end
+
+function Base.getindex(b::LazyBufferCache, u::ReverseDiff.TrackedArray)
+    s = b.sizemap(size(u)) # required buffer size
+    buf = get!(b.bufs, (T, s)) do
         # declare type since b.bufs dictionary is untyped
-        zero(u)::T # buffer to allocate if it was not found in b.bufs
+        similar(u, s)::T # buffer to allocate if it was not found in b.bufs
     end
     return buf
 end
