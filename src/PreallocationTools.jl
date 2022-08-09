@@ -1,6 +1,7 @@
 module PreallocationTools
 
 using ForwardDiff, ArrayInterfaceCore, Adapt
+import ReverseDiff
 
 struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T

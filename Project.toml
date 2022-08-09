@@ -7,6 +7,7 @@ version = "0.4.0"
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ArrayInterfaceCore = "30b0a656-2188-435a-8636-2ec0e6a096e2"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 
 [compat]
 Adapt = "3"
