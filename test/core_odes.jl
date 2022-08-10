@@ -18,7 +18,8 @@ sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == :Success
 
 #with auto-detected chunk_size
-prob = ODEProblem(foo, ones(5, 5), (0.0, 1.0), (ones(5, 5), dualcache(zeros(5, 5))))
+cache = dualcache(zeros(5, 5))
+prob = ODEProblem(foo, ones(5, 5), (0.0, 1.0), (A, cache))
 sol = solve(prob, TRBDF2())
 @test sol.retcode == :Success
 
