@@ -46,7 +46,7 @@ function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
     end
-    ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+    _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
@@ -54,11 +54,19 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dua
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
     end
-    ArrayInterfaceCore.restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+    _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
 get_tmp(dc::DiffCache, u::Number) = dc.du
 get_tmp(dc::DiffCache, u::AbstractArray) = dc.du
+
+function _restructure(normal_cache::Array, duals) 
+    reshape(duals, size(normal_cache)...)
+end
+
+function _restructure(normal_cache::AbstractArray, duals)
+    ArrayInterfaceCore.restructure(normal_cache, duals)
+end
 
 function enlargedualcache!(dc, nelem) #warning comes only once per dualcache.
     chunksize = div(nelem, length(dc.du)) - 1
