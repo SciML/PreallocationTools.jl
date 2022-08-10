@@ -11,8 +11,9 @@ function test(u0, dual, chunk_size)
     result_normal2 = get_tmp(cache, first(u0))
     result_dual1 = get_tmp(cache, dual)
     result_dual2 = get_tmp(cache, first(dual))
-    return allocs_normal1, allocs_normal2, allocs_dual1, allocs_dual2, result_normal1, result_normal2, result_dual1, 
-        result_dual2
+    return allocs_normal1, allocs_normal2, allocs_dual1, allocs_dual2, result_normal1,
+           result_normal2, result_dual1,
+           result_dual2
 end
 
 #Setup Base Array tests
@@ -49,7 +50,7 @@ dual = LArray((2, 2); a = zerodual, b = zerodual, c = zerodual, d = zerodual)
 results = test(u0, dual, chunk_size)
 #allocation tests
 @test results[1] == 0
-@test results[2] == 0 
+@test results[2] == 0
 @test_broken results[3] == 0
 @test_broken results[4] == 0
 #size tests
@@ -77,7 +78,7 @@ dual = ArrayPartition(dual_a, dual_b)
 results = test(u0, dual, chunk_size)
 #allocation tests
 @test results[1] == 0
-@test results[2] == 0 
+@test results[2] == 0
 @test_broken results[3] == 0
 @test_broken results[4] == 0
 #size tests

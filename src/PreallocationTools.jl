@@ -60,7 +60,7 @@ end
 get_tmp(dc::DiffCache, u::Number) = dc.du
 get_tmp(dc::DiffCache, u::AbstractArray) = dc.du
 
-function _restructure(normal_cache::Array, duals) 
+function _restructure(normal_cache::Array, duals)
     reshape(duals, size(normal_cache)...)
 end
 
