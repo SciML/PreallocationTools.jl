@@ -1,6 +1,7 @@
 module PreallocationTools
 
 using ForwardDiff, ArrayInterfaceCore, Adapt
+import ReverseDiff
 
 struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
@@ -95,7 +96,17 @@ function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     s = b.sizemap(size(u)) # required buffer size
     buf = get!(b.bufs, (T, s)) do
         similar(u, s) # buffer to allocate if it was not found in b.bufs
-    end::T # declare type since b.bufs dictionary is untyped
+    end::T  # declare type since b.bufs dictionary is untyped
+    return buf
+end
+
+function Base.getindex(b::LazyBufferCache, u::ReverseDiff.TrackedArray)
+    s = b.sizemap(size(u)) # required buffer size
+    T = ReverseDiff.TrackedArray
+    buf = get!(b.bufs, (T, s)) do
+        # declare type since b.bufs dictionary is untyped
+        similar(u, s)
+    end
     return buf
 end
 
