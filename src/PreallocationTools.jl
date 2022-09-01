@@ -71,8 +71,8 @@ end
 
 function enlargedualcache!(dc, nelem) #warning comes only once per dualcache.
     chunksize = div(nelem, length(dc.du)) - 1
-    @warn "The supplied dualcache was too small and was enlarged. This incurrs allocations
-    on the first call to get_tmp. If few calls to get_tmp occur and optimal performance is essential,
+    @warn "The supplied dualcache was too small and was enlarged. This incurs allocations
+    on the first call to `get_tmp`. If few calls to `get_tmp` occur and optimal performance is essential,
     consider changing 'N'/chunk size of this dualcache to $chunksize."
     resize!(dc.dual_du, nelem)
 end
