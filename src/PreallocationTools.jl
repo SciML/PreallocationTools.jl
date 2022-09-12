@@ -100,16 +100,6 @@ function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     return buf
 end
 
-function Base.getindex(b::LazyBufferCache, u::ReverseDiff.TrackedArray)
-    s = b.sizemap(size(u)) # required buffer size
-    T = ReverseDiff.TrackedArray
-    buf = get!(b.bufs, (T, s)) do
-        # declare type since b.bufs dictionary is untyped
-        similar(u, s)
-    end
-    return buf
-end
-
 export dualcache, get_tmp, LazyBufferCache
 
 end
