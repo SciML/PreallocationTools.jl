@@ -59,7 +59,8 @@ end
 ps = 2 #use to specify problem size; don't go crazy on this, because of the compilation time...
 coeffs = -collect(0.1:0.1:(ps^2 / 10))
 cache = dualcache(zeros(ps, ps), levels = 3)
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(ps, ps), (0.0, 1.0), (coeffs, cache))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(ps, ps), (0.0, 1.0),
+                                                  (coeffs, cache))
 realsol = solve(prob, TRBDF2(), saveat = 0.0:0.1:10.0, reltol = 1e-8)
 
 function objfun(x, prob, realsol, cache)
@@ -83,7 +84,8 @@ newtonsol = solve(optprob, Newton())
 
 #an example where chunk_sizes are not the same on all differentiation levels:
 cache = dualcache(zeros(ps, ps), [4, 4, 2])
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(ps, ps), (0.0, 1.0), (coeffs, cache))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(ps, ps), (0.0, 1.0),
+                                                  (coeffs, cache))
 realsol = solve(prob, TRBDF2(chunk_size = 2), saveat = 0.0:0.1:10.0, reltol = 1e-8)
 
 function objfun(x, prob, realsol, cache)

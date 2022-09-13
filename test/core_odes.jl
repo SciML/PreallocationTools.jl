@@ -30,7 +30,8 @@ function foo(du, u, (A, lbc), t)
     @. du = u + tmp
     nothing
 end
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(5, 5), (0.0, 1.0), (ones(5, 5), LazyBufferCache()))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(5, 5), (0.0, 1.0),
+                                                  (ones(5, 5), LazyBufferCache()))
 sol = solve(prob, TRBDF2())
 @test sol.retcode == :Success
 
@@ -46,7 +47,8 @@ function foo(du, u, (A, tmp), t)
 end
 #with specified chunk_size
 chunk_size = 4
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0), (A, dualcache(c, chunk_size)))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0),
+                                                  (A, dualcache(c, chunk_size)))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == :Success
 #with auto-detected chunk_size
