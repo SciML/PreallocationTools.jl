@@ -39,7 +39,7 @@ chunk_size = 10
 u0 = cu(rand(10, 10)) #example kept small for test purposes.
 A = cu(-randn(10, 10))
 cache = dualcache(cu(zeros(10, 10)), chunk_size)
-prob = ODEProblem(foo, u0, (0.0f0, 1.0f0), (A, cache))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == :Success
 
@@ -47,7 +47,7 @@ sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 u0 = cu(rand(10, 10)) #example kept small for test purposes.
 A = cu(-randn(10, 10))
 cache = dualcache(cu(zeros(10, 10)))
-prob = ODEProblem(foo, u0, (0.0f0, 1.0f0), (A, cache))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
 sol = solve(prob, TRBDF2())
 @test sol.retcode == :Success
 
