@@ -209,6 +209,11 @@ prob = ODEProblem(foo, ones(5, 5), (0., 1.0), (ones(5,5), LazyBufferCache()))
 solve(prob, TRBDF2())
 ```
 
+## Note About ReverseDiff Support for LazyBuffer 
+
+ReverseDiff support is done in SciMLSensitivity.jl to reduce the AD requirements on this package.
+Load that package if ReverseDiff overloads are required.
+
 ## Similar Projects
 
 [AutoPreallocation.jl](https://github.com/oxinabox/AutoPreallocation.jl) tries
