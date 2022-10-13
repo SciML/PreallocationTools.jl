@@ -60,8 +60,7 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dua
 end
 
 function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
-    @show eltype(u), eltype(dc.du)
-    if eltype(dc.du) <: eltype(u)
+    if promote_type(eltype(dc.du),eltype(u)) <: eltype(dc.du)
         dc.du
     else
         if length(dc.du) > length(dc.any_du)
