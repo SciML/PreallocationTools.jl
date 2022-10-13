@@ -63,7 +63,6 @@ function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
         dc.du
     else
-        @show "not here"
         if length(dc.du) > length(dc.any_du)
             resize!(dc.any_du, length(dc.du))
         end
