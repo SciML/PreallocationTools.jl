@@ -2,10 +2,10 @@ module PreallocationTools
 
 using ForwardDiff, ArrayInterfaceCore, Adapt
 
-struct DiffCache{T <: AbstractArray, S <: AbstractArray, U <: AbstractArray{Any}}
+struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
     dual_du::S
-    any_du::U
+    any_du::Vector{Any}
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
@@ -60,10 +60,10 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dua
 end
 
 function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
-    @show eltype(dc.du), eltype(u), promote_type(eltype(dc.du), eltype(u))
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
         dc.du
     else
+        @show "not here"
         if length(dc.du) > length(dc.any_du)
             resize!(dc.any_du, length(dc.du))
         end
