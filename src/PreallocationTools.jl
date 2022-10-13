@@ -5,12 +5,14 @@ using ForwardDiff, ArrayInterfaceCore, Adapt
 struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
     dual_du::S
+    any_du::Vector{Any}
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
     x = adapt(ArrayInterfaceCore.parameterless_type(u),
               zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
-    DiffCache(u, x)
+    xany = Any[]
+    DiffCache(u, x, xany)
 end
 
 """
@@ -57,8 +59,19 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dua
     _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
-get_tmp(dc::DiffCache, u::Number) = dc.du
-get_tmp(dc::DiffCache, u::AbstractArray) = dc.du
+function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
+    if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
+        dc.du
+    else
+        if length(dc.du) > length(dc.any_du)
+            resize!(dc.any_du, length(dc.du))
+        end
+
+        _restructure(dc.du, dc.any_du)
+    end
+end
+
+get_tmp(dc, u) = dc
 
 function _restructure(normal_cache::Array, duals)
     reshape(duals, size(normal_cache)...)
