@@ -11,7 +11,7 @@ end
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
     x = adapt(ArrayInterfaceCore.parameterless_type(u),
               zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
-    xany = adapt(ArrayInterfaceCore.parameterless_type(u), Any[])
+    xany = Any[]
     DiffCache(u, x, xany)
 end
 
