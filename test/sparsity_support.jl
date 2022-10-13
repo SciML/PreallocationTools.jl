@@ -5,7 +5,7 @@ struct GlobalDAE{T}
     f::T  # array of residuals
 end
 
-dae_cache = GlobalDAE(dualcache([0., 0.]), dualcache([0., 0.]));
+dae_cache = GlobalDAE(dualcache([0.0, 0.0]), dualcache([0.0, 0.0]));
 
 # multiple residual functions that collectively build the residual array
 function res1!(dae::GlobalDAE, u)
@@ -36,7 +36,7 @@ end
 
 wrap_res_dae_cache! = (output, x0) -> res_dae_cache!(dae_cache, output, x0)
 
-x0 = [1., 2.];
+x0 = [1.0, 2.0];
 output = similar(x0);
 res_dae_cache!(dae_cache, output, x0)
 

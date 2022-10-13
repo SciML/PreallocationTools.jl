@@ -59,7 +59,7 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dua
     _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
-function get_tmp(dc::DiffCache, u::Union{Number,AbstractArray})
+function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
     if eltype(dc.du) <: eltype(u)
         dc.du
     else
