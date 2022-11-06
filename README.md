@@ -1,8 +1,14 @@
 # PreallocationTools.jl
 
-[![Join the chat at https://gitter.im/JuliaDiffEq/Lobby](https://badges.gitter.im/JuliaDiffEq/Lobby.svg)](https://gitter.im/JuliaDiffEq/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
+[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/PreallocationTools/stable/)
+
+[![codecov](https://codecov.io/gh/SciML/PreallocationTools.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/PreallocationTools.jl)
 [![Build Status](https://github.com/SciML/PreallocationTools.jl/workflows/CI/badge.svg)](https://github.com/SciML/PreallocationTools.jl/actions?query=workflow%3ACI)
 [![Build status](https://badge.buildkite.com/8e62ff2622721bf7a82aa5effb466d311d53fe63dc89bf2f34.svg)](https://buildkite.com/julialang/preallocationtools-dot-jl)
+
+[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
+[![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
 PreallocationTools.jl is a set of tools for helping build non-allocating
 pre-cached functions for high-performance computing in Julia. Its tools handle
