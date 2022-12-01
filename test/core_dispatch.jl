@@ -2,7 +2,7 @@ using LinearAlgebra, Test, PreallocationTools, ForwardDiff, LabelledArrays,
       RecursiveArrayTools
 
 function test(u0, dual, chunk_size)
-    cache = PreallocationTools.dualcache(u0, chunk_size)
+    cache = PreallocationTools.ResizingDiffCache(u0, chunk_size)
     allocs_normal1 = @allocated get_tmp(cache, u0)
     allocs_normal2 = @allocated get_tmp(cache, first(u0))
     allocs_dual1 = @allocated get_tmp(cache, dual)

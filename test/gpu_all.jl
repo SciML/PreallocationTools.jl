@@ -7,7 +7,7 @@ u0_CU = cu(ones(5, 5))
 dual_CU = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32,
                                     chunk_size}, 2, 2))
 dual_N = ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32, 5}(0)
-cache_CU = dualcache(u0_CU, chunk_size)
+cache_CU = ResizingDiffCache(u0_CU, chunk_size)
 tmp_du_CUA = get_tmp(cache_CU, u0_CU)
 tmp_dual_du_CUA = get_tmp(cache_CU, dual_CU)
 tmp_du_CUN = get_tmp(cache_CU, 0.0f0)
@@ -38,7 +38,7 @@ end
 chunk_size = 10
 u0 = cu(rand(10, 10)) #example kept small for test purposes.
 A = cu(-randn(10, 10))
-cache = dualcache(cu(zeros(10, 10)), chunk_size)
+cache = ResizingDiffCache(cu(zeros(10, 10)), chunk_size)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == :Success
@@ -46,7 +46,7 @@ sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 #with auto-detected chunk_size
 u0 = cu(rand(10, 10)) #example kept small for test purposes.
 A = cu(-randn(10, 10))
-cache = dualcache(cu(zeros(10, 10)))
+cache = ResizingDiffCache(cu(zeros(10, 10)))
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
 sol = solve(prob, TRBDF2())
 @test sol.retcode == :Success
@@ -54,7 +54,7 @@ sol = solve(prob, TRBDF2())
 #resizing tests
 randmat = cu(rand(5, 3))
 sto = similar(randmat)
-stod = dualcache(sto)
+stod = ResizingDiffCache(sto)
 function claytonsample!(sto, τ, α; randmat = randmat)
     sto = get_tmp(sto, τ)
     sto .= randmat

@@ -8,29 +8,88 @@ struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     any_du::Vector{Any}
 end
 
-function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
-    x = adapt(ArrayInterfaceCore.parameterless_type(u),
-              zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
+function DiffCache(u::AbstractArray{T}, siz, ::Type{Val{chunk_size}}) where {T, chunk_size}
+    x = ArrayInterfaceCore.restructure(u,
+                                   zeros(ForwardDiff.Dual{nothing, T, chunk_size}, siz...))
     xany = Any[]
     DiffCache(u, x, xany)
 end
 
 """
 
-`dualcache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u)); levels::Int = 1)`
-`dualcache(u::AbstractArray; N::AbstractArray{<:Int})`
+`DiffCache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
 
 Builds a `DualCache` object that stores both a version of the cache for `u`
+and for the `Dual` version of `u`, allowing use of pre-cached vectors with
+forward-mode automatic differentiation.
+"""
+function DiffCache(u::AbstractArray, N = Val{ForwardDiff.pickchunksize(length(u))})
+    DiffCache(u, size(u), N)
+end
+
+# Legacy deprecated
+@deprecate dualcache DiffCache
+
+chunksize(::Type{ForwardDiff.Dual{T, V, N}}) where {T, V, N} = N
+
+function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
+    x = reinterpret(T, dc.dual_du)
+    if chunksize(T) === chunksize(eltype(dc.dual_du))
+        x
+    else
+        @view x[axes(dc.du)...]
+    end
+end
+
+function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
+    x = reinterpret(T, dc.dual_du)
+    if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
+        if chunksize(T) === chunksize(eltype(dc.dual_du))
+            x
+        else
+            @view x[axes(dc.du)...]
+        end
+    else
+        if length(dc.du) > length(dc.any_du)
+            resize!(dc.any_du, length(dc.du))
+        end
+        _restructure(dc.du, dc.any_du)
+    end
+end
+
+get_tmp(dc::DiffCache, u::Number) = dc.du
+get_tmp(dc::DiffCache, u::AbstractArray) = dc.du
+
+# ResizingDiffCache
+
+struct ResizingDiffCache{T <: AbstractArray, S <: AbstractArray}
+    du::T
+    dual_du::S
+    any_du::Vector{Any}
+end
+
+function ResizingDiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
+    x = adapt(ArrayInterfaceCore.parameterless_type(u),
+              zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
+    xany = Any[]
+    ResizingDiffCache(u, x, xany)
+end
+
+"""
+`ResizingDiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u)); levels::Int = 1)`
+`ResizingDiffCache(u::AbstractArray; N::AbstractArray{<:Int})`
+
+Builds a `ResizingDiffCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation. Supports nested AD via keyword `levels`
 or specifying an array of chunk_sizes.
 
 """
-function dualcache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u));
-                   levels::Int = 1)
-    DiffCache(u, size(u), N * ones(Int, levels))
+function ResizingDiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u));
+                           levels::Int = 1)
+    ResizingDiffCache(u, size(u), N * ones(Int, levels))
 end
-dualcache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
+dualcache(u::AbstractArray, N::AbstractArray{<:Int}) = ResizingDiffCache(u, size(u), N)
 function dualcache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where {N}
     dualcache(u, N; levels)
 end
@@ -38,12 +97,12 @@ dualcache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = dualcache(u, 
 
 """
 
-`get_tmp(dc::DiffCache, u)`
+`get_tmp(dc::ResizingDiffCache, u)`
 
 Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`.
 
 """
-function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
+function get_tmp(dc::ResizingDiffCache, u::T) where {T <: ForwardDiff.Dual}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
@@ -51,7 +110,7 @@ function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
     _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
-function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
+function get_tmp(dc::ResizingDiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
         enlargedualcache!(dc, nelem)
@@ -59,7 +118,7 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dua
     _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
-function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
+function get_tmp(dc::ResizingDiffCache, u::Union{Number, AbstractArray})
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
         dc.du
     else
@@ -89,6 +148,8 @@ function enlargedualcache!(dc, nelem) #warning comes only once per dualcache.
     resize!(dc.dual_du, nelem)
 end
 
+# LazyBufferCache
+
 """
     b = LazyBufferCache(f=identity)
 
@@ -112,6 +173,7 @@ function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     return buf
 end
 
-export dualcache, get_tmp, LazyBufferCache
+export DiffCache, ResizingDiffCache, LazyBufferCache
+export get_tmp
 
 end

@@ -3,7 +3,7 @@ using Test, PreallocationTools, ForwardDiff, LinearAlgebra
 #test for downsizing cache
 randmat = rand(5, 3)
 sto = similar(randmat)
-stod = dualcache(sto)
+stod = ResizingDiffCache(sto)
 
 function claytonsample!(sto, τ, α; randmat = randmat)
     sto = get_tmp(sto, τ)
@@ -48,7 +48,7 @@ u = [3.0, 0.0]
 A = ones(2, 2)
 
 du = similar(u)
-_du = dualcache(du)
+_du = ResizingDiffCache(du)
 f = A -> loss(_du, u, A, 0.0)
 analyticalsolution = [3.0 0; 0 0]
 @test ForwardDiff.gradient(f, A) ≈ analyticalsolution
