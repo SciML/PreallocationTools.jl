@@ -24,6 +24,10 @@ end
 df1 = ForwardDiff.derivative(τ -> claytonsample!(stod, τ, 0.0), 0.3)
 @test size(randmat) == size(df1)
 
+stod = FixedSizeDiffCache(sto)
+ForwardDiff.derivative(τ -> claytonsample!(stod, τ), 0.3)
+@test size(randmat) == size(df1)
+
 #calculating the jacobian of claytonsample! with respect to τ and α
 df2 = ForwardDiff.jacobian(x -> claytonsample!(stod, x[1], x[2]), [0.3; 0.0]) #should give a 15x2 array,
 #because ForwardDiff flattens the output of jacobian, see: https://juliadiff.org/ForwardDiff.jl/stable/user/api/#ForwardDiff.jacobian
