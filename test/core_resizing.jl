@@ -25,7 +25,7 @@ df1 = ForwardDiff.derivative(τ -> claytonsample!(stod, τ, 0.0), 0.3)
 @test size(randmat) == size(df1)
 
 stod = FixedSizeDiffCache(sto)
-ForwardDiff.derivative(τ -> claytonsample!(stod, τ), 0.3)
+ForwardDiff.derivative(τ -> claytonsample!(stod, τ, 0.0), 0.3)
 @test size(randmat) == size(df1)
 
 #calculating the jacobian of claytonsample! with respect to τ and α

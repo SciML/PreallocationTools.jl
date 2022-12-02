@@ -60,7 +60,7 @@ prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, c
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == ReturnCode.Success
 
-cache = FixedSizeDiffCache(cu(zeros(5, 5)), chunk_size)
+cache = FixedSizeDiffCache(cu(zeros(10, 10)), chunk_size)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == ReturnCode.Success
