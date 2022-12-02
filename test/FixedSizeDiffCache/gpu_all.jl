@@ -10,20 +10,12 @@ dual_B = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, 
 cache_B = FixedSizeDiffCache(u0_B, chunk_size)
 tmp_du_BA = get_tmp(cache_B, u0_B)
 tmp_dual_du_BA = get_tmp(cache_B, dual_B)
-tmp_du_BN = get_tmp(cache_B, u0_B[1])
-tmp_dual_du_BN = get_tmp(cache_B, dual_B[1])
 @test size(tmp_du_BA) == size(u0_B)
 @test typeof(tmp_du_BA) == typeof(u0_B)
 @test eltype(tmp_du_BA) == eltype(u0_B)
 @test size(tmp_dual_du_BA) == size(u0_B)
 @test_broken typeof(tmp_dual_du_BA) == typeof(dual_B)
 @test eltype(tmp_dual_du_BA) == eltype(dual_B)
-@test size(tmp_du_BN) == size(u0_B)
-@test typeof(tmp_du_BN) == typeof(u0_B)
-@test eltype(tmp_du_BN) == eltype(u0_B)
-@test size(tmp_dual_du_BN) == size(u0_B)
-@test_broken typeof(tmp_dual_du_BN) == typeof(dual_B)
-@test eltype(tmp_dual_du_BN) == eltype(dual_B)
 
 # upstream
 OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = Any
