@@ -14,7 +14,7 @@ function FixedSizeDiffCache(u::AbstractArray{T}, siz,
                                        zeros(ForwardDiff.Dual{nothing, T, chunk_size},
                                              siz...))
     xany = Any[]
-    FixedSizeDiffCache(u, x, xany)
+    FixedSizeDiffCache(deepcopy(u), x, xany)
 end
 
 """
