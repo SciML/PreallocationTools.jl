@@ -6,7 +6,7 @@ chunk_size = 5
 chunk_size = 5
 u0_B = cu(ones(5, 5))
 dual_B = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32,
-                                chunk_size}, 2, 2))
+                                   chunk_size}, 2, 2))
 cache_B = FixedSizeDiffCache(u0_B, chunk_size)
 tmp_du_BA = get_tmp(cache_B, u0_B)
 tmp_dual_du_BA = get_tmp(cache_B, dual_B)
@@ -32,7 +32,7 @@ chunk_size = 5
 u0 = cu(ones(5, 5))
 A = cu(ones(5, 5))
 cache = FixedSizeDiffCache(cu(zeros(5, 5)), chunk_size)
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0f0, 1f0), (A, cache))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == ReturnCode.Success
 
