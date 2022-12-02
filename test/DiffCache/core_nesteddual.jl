@@ -68,7 +68,7 @@ function objfun(x, prob, realsol, cache)
     sol = solve(prob, TRBDF2(), saveat = 0.0:0.1:10.0, reltol = 1e-8)
 
     ofv = 0.0
-    if any((s.retcode != :Success for s in sol))
+    if any((s.retcode != ReturnCode.Success for s in sol))
         ofv = 1e12
     else
         ofv = sum((sol .- realsol) .^ 2)
@@ -93,7 +93,7 @@ function objfun(x, prob, realsol, cache)
     sol = solve(prob, TRBDF2(chunk_size = 2), saveat = 0.0:0.1:10.0, reltol = 1e-8)
 
     ofv = 0.0
-    if any((s.retcode != :Success for s in sol))
+    if any((s.retcode != ReturnCode.Success for s in sol))
         ofv = 1e12
     else
         ofv = sum((sol .- realsol) .^ 2)

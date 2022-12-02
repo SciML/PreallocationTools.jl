@@ -1,5 +1,7 @@
 using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff
 
+chunk_size = 5
+
 #Dispatch tests
 u0_CU = cu(ones(5, 5))
 dual_CU = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64,
@@ -37,7 +39,7 @@ A = cu(-randn(10, 10))
 cache = FixedSizeDiffCache(A, chunk_size)
 prob = ODEProblem(foo, u0, (0.0f0, 1.0f0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
-@test sol.retcode == :Success
+@test sol.retcode == ReturnCode.Success
 
 #with auto-detected chunk_size
 u0 = cu(rand(10, 10)) #example kept small for test purposes.
@@ -45,7 +47,7 @@ A = cu(-randn(10, 10))
 cache = FixedSizeDiffCache(A)
 prob = ODEProblem(foo, u0, (0.0f0, 1.0f0), (A, cache))
 sol = solve(prob, TRBDF2())
-@test sol.retcode == :Success
+@test sol.retcode == ReturnCode.Success
 
 randmat = cu(rand(5, 3))
 sto = similar(randmat)
