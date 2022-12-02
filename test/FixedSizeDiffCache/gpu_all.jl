@@ -5,7 +5,7 @@ chunk_size = 5
 #Dispatch tests
 chunk_size = 5
 u0_B = cu(ones(5, 5))
-dual_B = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64,
+dual_B = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32,
                                 chunk_size}, 2, 2))
 cache_B = FixedSizeDiffCache(u0_B, chunk_size)
 tmp_du_BA = get_tmp(cache_B, u0_B)
