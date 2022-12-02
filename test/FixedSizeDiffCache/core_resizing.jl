@@ -2,7 +2,7 @@ using Test, PreallocationTools, ForwardDiff
 
 randmat = rand(10, 2)
 sto = similar(randmat)
-stod = dualcache(sto)
+stod = FixedSizeDiffCache(sto)
 
 function claytonsample!(sto, τ; randmat = randmat)
     sto = get_tmp(sto, τ)
