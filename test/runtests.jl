@@ -11,14 +11,19 @@ function activate_downstream_env()
 end
 
 if GROUP == "All" || GROUP == "Core"
-    @safetestset "Dispatch" begin include("core_dispatch.jl") end
-    @safetestset "ODE tests" begin include("core_odes.jl") end
-    @safetestset "Resizing" begin include("core_resizing.jl") end
-    @safetestset "Nested Duals" begin include("core_nesteddual.jl") end
-    @safetestset "Sparsity Support" begin include("sparsity_support.jl") end
+    @safetestset "DiffCache Dispatch" begin include("DiffCache/core_dispatch.jl") end
+    @safetestset "DiffCache ODE tests" begin include("DiffCache/core_odes.jl") end
+    @safetestset "DiffCache Base Array Resizing" begin include("DiffCache/core_resizing.jl") end
+
+    @safetestset "ResizingDiffCache Dispatch" begin include("ResizingDiffCache/core_dispatch.jl") end
+    @safetestset "ResizingDiffCache ODE tests" begin include("ResizingDiffCache/core_odes.jl") end
+    @safetestset "ResizingDiffCache Resizing" begin include("ResizingDiffCache/core_resizing.jl") end
+    @safetestset "ResizingDiffCache Nested Duals" begin include("ResizingDiffCache/core_nesteddual.jl") end
+    @safetestset "ResizingDiffCache Sparsity Support" begin include("ResizingDiffCache/sparsity_support.jl") end
 end
 
 if !is_APPVEYOR && GROUP == "GPU"
     activate_downstream_env()
-    @safetestset "GPU tests" begin include("gpu_all.jl") end
+    @safetestset "GPU tests" begin include("DiffCache/gpu_all.jl") end
+    @safetestset "GPU tests" begin include("ResizingDiffCache/gpu_all.jl") end
 end

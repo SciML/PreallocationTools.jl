@@ -23,8 +23,12 @@ Builds a `DualCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 """
-function DiffCache(u::AbstractArray, N = Val{ForwardDiff.pickchunksize(length(u))})
-    DiffCache(u, size(u), N)
+function DiffCache(u::AbstractArray, ::Type{Val{N}} = Val{ForwardDiff.pickchunksize(length(u))}) where N
+    DiffCache(u, size(u), Val{N})
+end
+
+function DiffCache(u::AbstractArray, N::Integer)
+    DiffCache(u, size(u), Val{N})
 end
 
 # Legacy deprecated
@@ -43,12 +47,16 @@ end
 
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
     x = reinterpret(T, dc.dual_du)
+    if chunksize(T) === chunksize(eltype(dc.dual_du))
+        x
+    else
+        @view x[axes(dc.du)...]
+    end
+end
+
+function get_tmp(dc::DiffCache, u::Union{Number,AbstractArray})
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
-        if chunksize(T) === chunksize(eltype(dc.dual_du))
-            x
-        else
-            @view x[axes(dc.du)...]
-        end
+        dc.du
     else
         if length(dc.du) > length(dc.any_du)
             resize!(dc.any_du, length(dc.du))
@@ -56,9 +64,6 @@ function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dua
         _restructure(dc.du, dc.any_du)
     end
 end
-
-get_tmp(dc::DiffCache, u::Number) = dc.du
-get_tmp(dc::DiffCache, u::AbstractArray) = dc.du
 
 # ResizingDiffCache
 
@@ -89,11 +94,11 @@ function ResizingDiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(
                            levels::Int = 1)
     ResizingDiffCache(u, size(u), N * ones(Int, levels))
 end
-dualcache(u::AbstractArray, N::AbstractArray{<:Int}) = ResizingDiffCache(u, size(u), N)
-function dualcache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where {N}
-    dualcache(u, N; levels)
+ResizingDiffCache(u::AbstractArray, N::AbstractArray{<:Int}) = ResizingDiffCache(u, size(u), N)
+function ResizingDiffCache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where {N}
+    ResizingDiffCache(u, N; levels)
 end
-dualcache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = dualcache(u, N; levels)
+ResizingDiffCache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = dualcache(u, N; levels)
 
 """
 

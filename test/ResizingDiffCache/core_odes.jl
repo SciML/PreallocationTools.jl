@@ -15,13 +15,13 @@ A = ones(5, 5)
 cache = ResizingDiffCache(zeros(5, 5), chunk_size)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
-@test sol.retcode == :Success
+@test sol.retcode == ReturnCode.Success
 
 #with auto-detected chunk_size
 cache = ResizingDiffCache(zeros(5, 5))
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(5, 5), (0.0, 1.0), (A, cache))
 sol = solve(prob, TRBDF2())
-@test sol.retcode == :Success
+@test sol.retcode == ReturnCode.Success
 
 #Base array with LBC
 function foo(du, u, (A, lbc), t)
@@ -33,7 +33,7 @@ end
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(5, 5), (0.0, 1.0),
                                                   (ones(5, 5), LazyBufferCache()))
 sol = solve(prob, TRBDF2())
-@test sol.retcode == :Success
+@test sol.retcode == ReturnCode.Success
 
 #LArray
 A = LArray((2, 2); a = 1.0, b = 1.0, c = 1.0, d = 1.0)
@@ -50,8 +50,8 @@ chunk_size = 4
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0),
                                                   (A, ResizingDiffCache(c, chunk_size)))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
-@test sol.retcode == :Success
+@test sol.retcode == ReturnCode.Success
 #with auto-detected chunk_size
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0), (A, ResizingDiffCache(c)))
 sol = solve(prob, TRBDF2())
-@test sol.retcode == :Success
+@test sol.retcode == ReturnCode.Success
