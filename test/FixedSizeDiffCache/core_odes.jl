@@ -25,14 +25,3 @@ prob = ODEProblem(foo, ones(5, 5), (0.0, 1.0),
                   (ones(5, 5), FixedSizeDiffCache(zeros(5, 5))))
 sol = solve(prob, TRBDF2())
 @test sol.retcode == ReturnCode.Success
-
-#Base array with LBC
-function foo(du, u, (A, lbc), t)
-    tmp = lbc[u]
-    mul!(tmp, A, u)
-    @. du = u + tmp
-    nothing
-end
-prob = ODEProblem(foo, ones(5, 5), (0.0, 1.0), (ones(5, 5), LazyBufferCache()))
-sol = solve(prob, TRBDF2())
-@test sol.retcode == ReturnCode.Success
