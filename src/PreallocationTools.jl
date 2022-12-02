@@ -8,9 +8,11 @@ struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     any_du::Vector{Any}
 end
 
-function FixedSizeDiffCache(u::AbstractArray{T}, siz, ::Type{Val{chunk_size}}) where {T, chunk_size}
+function FixedSizeDiffCache(u::AbstractArray{T}, siz,
+                            ::Type{Val{chunk_size}}) where {T, chunk_size}
     x = ArrayInterfaceCore.restructure(u,
-                                   zeros(ForwardDiff.Dual{nothing, T, chunk_size}, siz...))
+                                       zeros(ForwardDiff.Dual{nothing, T, chunk_size},
+                                             siz...))
     xany = Any[]
     FixedSizeDiffCache(u, x, xany)
 end
@@ -23,7 +25,10 @@ Builds a `DualCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 """
-function FixedSizeDiffCache(u::AbstractArray, ::Type{Val{N}} = Val{ForwardDiff.pickchunksize(length(u))}) where N
+function FixedSizeDiffCache(u::AbstractArray,
+                            ::Type{Val{N}} = Val{ForwardDiff.pickchunksize(length(u))}) where {
+                                                                                               N
+                                                                                               }
     FixedSizeDiffCache(u, size(u), Val{N})
 end
 
@@ -51,7 +56,7 @@ function get_tmp(dc::FixedSizeDiffCache, u::AbstractArray{T}) where {T <: Forwar
     end
 end
 
-function get_tmp(dc::FixedSizeDiffCache, u::Union{Number,AbstractArray})
+function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
         dc.du
     else
@@ -88,7 +93,7 @@ or specifying an array of chunk_sizes.
 
 """
 function DiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u));
-                           levels::Int = 1)
+                   levels::Int = 1)
     DiffCache(u, size(u), N * ones(Int, levels))
 end
 DiffCache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)

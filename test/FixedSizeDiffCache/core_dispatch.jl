@@ -1,9 +1,11 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, ForwardDiff, LabelledArrays, RecursiveArrayTools
+using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, ForwardDiff, LabelledArrays,
+      RecursiveArrayTools
 
 #Base Array tests
 chunk_size = 5
 u0_B = ones(5, 5)
-dual_B = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64, chunk_size}, 2, 2)
+dual_B = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64,
+                                chunk_size}, 2, 2)
 cache_B = FixedSizeDiffCache(u0_B, chunk_size)
 tmp_du_BA = get_tmp(cache_B, u0_B)
 tmp_dual_du_BA = get_tmp(cache_B, dual_B)
@@ -22,12 +24,12 @@ tmp_dual_du_BN = get_tmp(cache_B, dual_B[1])
 @test_broken typeof(tmp_dual_du_BN) == typeof(dual_B)
 @test eltype(tmp_dual_du_BN) == eltype(dual_B)
 
-
-
 #ArrayPartition tests
-u0_AP = ArrayPartition(ones(2,2), ones(3,3))
-dual_a = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64, chunk_size}, 2, 2)
-dual_b = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64, chunk_size}, 3, 3)
+u0_AP = ArrayPartition(ones(2, 2), ones(3, 3))
+dual_a = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64,
+                                chunk_size}, 2, 2)
+dual_b = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64,
+                                chunk_size}, 3, 3)
 dual_AP = ArrayPartition(dual_a, dual_b)
 cache_AP = FixedSizeDiffCache(u0_AP, chunk_size)
 tmp_du_APA = get_tmp(cache_AP, u0_AP)
