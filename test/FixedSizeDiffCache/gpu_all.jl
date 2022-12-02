@@ -14,7 +14,7 @@ tmp_dual_du_BA = get_tmp(cache_B, dual_B)
 @test typeof(tmp_du_BA) == typeof(u0_B)
 @test eltype(tmp_du_BA) == eltype(u0_B)
 @test size(tmp_dual_du_BA) == size(u0_B)
-@test_broken typeof(tmp_dual_du_BA) == typeof(dual_B)
+@test typeof(tmp_dual_du_BA) == typeof(dual_B)
 @test eltype(tmp_dual_du_BA) == eltype(dual_B)
 
 # upstream
@@ -31,8 +31,8 @@ end
 chunk_size = 5
 u0 = cu(ones(5, 5))
 A = cu(ones(5, 5))
-cache = FixedSizeDiffCache(zeros(5, 5), chunk_size)
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0), (A, cache))
+cache = FixedSizeDiffCache(cu(zeros(5, 5)), chunk_size)
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0f0, 1f0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == ReturnCode.Success
 
