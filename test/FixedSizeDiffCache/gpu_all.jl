@@ -1,19 +1,14 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff,
-      ArrayInterfaceCore
+using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA
 
 #Dispatch tests
-chunk_size = 5
-u0_CU = cu(ones(5, 5))
-dual_CU = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32,
-                                    chunk_size}, 2, 2))
-dual_N = ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32, 5}(0)
-cache_CU = ResizingDiffCache(u0_CU, chunk_size)
+u0_CU = cu(ones(5,5))
+dual_CU = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64, chunk_size}, 2, 2))
+cache_CU = FixedSizeDiffCache(u0_CU, chunk_size)
 tmp_du_CUA = get_tmp(cache_CU, u0_CU)
 tmp_dual_du_CUA = get_tmp(cache_CU, dual_CU)
-tmp_du_CUN = get_tmp(cache_CU, 0.0f0)
-tmp_dual_du_CUN = get_tmp(cache_CU, dual_N)
-@test ArrayInterfaceCore.parameterless_type(typeof(cache_CU.dual_du)) ==
-      ArrayInterfaceCore.parameterless_type(typeof(u0_CU)) #check that dual cache array is a GPU array for performance reasons.
+tmp_du_CUN = get_tmp(cache_CU, u0_CU[1])
+tmp_dual_du_CUN = get_tmp(cache_CU, dual_CU[1])
+@test typeof(cache_CU.dual_du) == typeof(u0_CU) #check that dual cache array is a GPU array for performance reasons.
 @test size(tmp_du_CUA) == size(u0_CU)
 @test typeof(tmp_du_CUA) == typeof(u0_CU)
 @test eltype(tmp_du_CUA) == eltype(u0_CU)
@@ -36,36 +31,39 @@ function foo(du, u, (A, tmp), t)
 end
 #with specified chunk_size
 chunk_size = 10
-u0 = cu(rand(10, 10)) #example kept small for test purposes.
-A = cu(-randn(10, 10))
-cache = ResizingDiffCache(cu(zeros(10, 10)), chunk_size)
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
+u0 = cu(rand(10,10)) #example kept small for test purposes.
+A  = cu(-randn(10,10))
+cache = FixedSizeDiffCache(A, chunk_size)
+prob = ODEProblem(foo, u0, (0.0f0,1.0f0), (A, cache))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == :Success
 
 #with auto-detected chunk_size
-u0 = cu(rand(10, 10)) #example kept small for test purposes.
-A = cu(-randn(10, 10))
-cache = ResizingDiffCache(cu(zeros(10, 10)))
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
+u0 = cu(rand(10,10)) #example kept small for test purposes.
+A  = cu(-randn(10,10))
+cache = FixedSizeDiffCache(A)
+prob = ODEProblem(foo, u0, (0.0f0,1.0f0), (A, cache))
 sol = solve(prob, TRBDF2())
 @test sol.retcode == :Success
 
-#resizing tests
 randmat = cu(rand(5, 3))
 sto = similar(randmat)
-stod = ResizingDiffCache(sto)
-function claytonsample!(sto, τ, α; randmat = randmat)
+stod = FixedSizeDiffCache(sto)
+function claytonsample!(sto, τ, α; randmat=randmat)
     sto = get_tmp(sto, τ)
-    sto .= randmat
+        sto .= randmat
     τ == 0 && return sto
-    v = @view sto[:, 2]
-    u = @view sto[:, 1]
-    @. v = (1 - u^(-τ) + u^(-τ) * v^(-(τ / (1 + τ))))^(-1 / τ) * α
-    @. u = (1 - u^(-τ) + u^(-τ) * v^(-(τ / (1 + τ))))^(-1 / τ)
+    n = size(sto, 1)
+    for i in 1:n
+        v = sto[i, 2]
+        u = sto[i, 1]
+        sto[i, 1] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)*α
+        sto[i, 2] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)
+    end
     return sto
 end
 
+#resizing tests
 #taking the derivative of claytonsample! with respect to τ only
 df1 = ForwardDiff.derivative(τ -> claytonsample!(stod, τ, 0.0), 0.3)
 @test size(randmat) == size(df1)
@@ -75,4 +73,4 @@ df2 = ForwardDiff.jacobian(x -> claytonsample!(stod, x[1], x[2]), [0.3; 0.0]) #s
 #because ForwardDiff flattens the output of jacobian, see: https://juliadiff.org/ForwardDiff.jl/stable/user/api/#ForwardDiff.jacobian
 
 @test (length(randmat), 2) == size(df2)
-@test df1[1:5, 2] ≈ df2[6:10, 1]
+@test df1[1:5,2] ≈ df2[6:10,1]
