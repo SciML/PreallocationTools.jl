@@ -1,3 +1,7 @@
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 PreallocationTools = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
+
+[compat]
+CUDA = "3.12"
+PreallocationTools = "0.4"

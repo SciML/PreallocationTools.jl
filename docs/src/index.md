@@ -1,15 +1,5 @@
 # PreallocationTools.jl
 
-[![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
-[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/PreallocationTools/stable/)
-
-[![codecov](https://codecov.io/gh/SciML/PreallocationTools.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/PreallocationTools.jl)
-[![Build Status](https://github.com/SciML/PreallocationTools.jl/workflows/CI/badge.svg)](https://github.com/SciML/PreallocationTools.jl/actions?query=workflow%3ACI)
-[![Build status](https://badge.buildkite.com/8e62ff2622721bf7a82aa5effb466d311d53fe63dc89bf2f34.svg)](https://buildkite.com/julialang/preallocationtools-dot-jl)
-
-[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
-[![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
-
 PreallocationTools.jl is a set of tools for helping build non-allocating
 pre-cached functions for high-performance computing in Julia. Its tools handle
 edge cases of automatic differentiation to make it easier for users to get
@@ -18,7 +8,7 @@ function that is being called.
 
 ## DiffCache
 
-`DiffCache` is a type for doubly-preallocated vectors which are
+`DiffCache` is a method for generating doubly-preallocated vectors which are
 compatible with non-allocating forward-mode automatic differentiation by
 ForwardDiff.jl. Since ForwardDiff uses chunked duals in its forward pass, two
 vector sizes are required in order for the arrays to be properly defined.
@@ -244,3 +234,73 @@ Load that package if ReverseDiff overloads are required.
 [AutoPreallocation.jl](https://github.com/oxinabox/AutoPreallocation.jl) tries
 to do this automatically at the compiler level. [Alloc.jl](https://github.com/FluxML/Alloc.jl)
 tries to do this with a bump allocator.
+
+## Contributing
+
+- Please refer to the
+  [SciML ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://github.com/SciML/ColPrac/blob/master/README.md)
+  for guidance on PRs, issues, and other matters relating to contributing to SciML.
+- See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
+- There are a few community forums:
+    - The #diffeq-bridged and #sciml-bridged channels in the
+      [Julia Slack](https://julialang.org/slack/)
+    - The #diffeq-bridged and #sciml-bridged channels in the
+      [Julia Zulip](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
+    - On the [Julia Discourse forums](https://discourse.julialang.org)
+    - See also [SciML Community page](https://sciml.ai/community/)
+
+
+## Reproducibility
+```@raw html
+<details><summary>The documentation of this SciML package was built using these direct dependencies,</summary>
+```
+```@example
+using Pkg # hide
+Pkg.status() # hide
+```
+```@raw html
+</details>
+```
+```@raw html
+<details><summary>and using this machine and Julia version.</summary>
+```
+```@example
+using InteractiveUtils # hide
+versioninfo() # hide
+```
+```@raw html
+</details>
+```
+```@raw html
+<details><summary>A more complete overview of all dependencies and their versions is also provided.</summary>
+```
+```@example
+using Pkg # hide
+Pkg.status(;mode = PKGMODE_MANIFEST) # hide
+```
+```@raw html
+</details>
+```
+```@raw html
+You can also download the
+<a href="
+```
+```@eval
+using TOML
+version = TOML.parse(read("../../Project.toml",String))["version"]
+name = TOML.parse(read("../../Project.toml",String))["name"]
+link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/Manifest.toml"
+```
+```@raw html
+">manifest</a> file and the
+<a href="
+```
+```@eval
+using TOML
+version = TOML.parse(read("../../Project.toml",String))["version"]
+name = TOML.parse(read("../../Project.toml",String))["name"]
+link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/Project.toml"
+```
+```@raw html
+">project</a> file.
+```

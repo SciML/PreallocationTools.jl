@@ -11,10 +11,11 @@ function activate_downstream_env()
 end
 
 if GROUP == "All" || GROUP == "Core"
-    @safetestset "Dispatch" begin include("core_dispatch.jl") end
-    @safetestset "ODE tests" begin include("core_odes.jl") end
-    @safetestset "Resizing" begin include("core_resizing.jl") end
-    @safetestset "Nested Duals" begin include("core_nesteddual.jl") end
+    @safetestset "DiffCache Dispatch" begin include("core_dispatch.jl") end
+    @safetestset "DiffCache ODE tests" begin include("core_odes.jl") end
+    @safetestset "DiffCache Resizing" begin include("core_resizing.jl") end
+    @safetestset "DiffCache Nested Duals" begin include("core_nesteddual.jl") end
+    @safetestset "DiffCache Sparsity Support" begin include("sparsity_support.jl") end
 end
 
 if !is_APPVEYOR && GROUP == "GPU"
