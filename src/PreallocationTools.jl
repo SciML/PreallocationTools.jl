@@ -21,7 +21,7 @@ end
 
 `FixedSizeDiffCache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
 
-Builds a `DualCache` object that stores both a version of the cache for `u`
+Builds a `FixedSizeDiffCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 """
@@ -100,7 +100,7 @@ DiffCache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
 function DiffCache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where {N}
     DiffCache(u, N; levels)
 end
-DiffCache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = dualcache(u, N; levels)
+DiffCache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = DiffCache(u, N; levels)
 
 # Legacy deprecate later
 const dualcache = DiffCache
@@ -115,7 +115,7 @@ Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`
 function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
-        enlargedualcache!(dc, nelem)
+        enlargediffcache!(dc, nelem)
     end
     _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
@@ -123,7 +123,7 @@ end
 function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
-        enlargedualcache!(dc, nelem)
+        enlargediffcache!(dc, nelem)
     end
     _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
@@ -150,11 +150,11 @@ function _restructure(normal_cache::AbstractArray, duals)
     ArrayInterfaceCore.restructure(normal_cache, duals)
 end
 
-function enlargedualcache!(dc, nelem) #warning comes only once per dualcache.
+function enlargediffcache!(dc, nelem) #warning comes only once per DiffCache.
     chunksize = div(nelem, length(dc.du)) - 1
-    @warn "The supplied dualcache was too small and was enlarged. This incurs allocations
+    @warn "The supplied DiffCache was too small and was enlarged. This incurs allocations
     on the first call to `get_tmp`. If few calls to `get_tmp` occur and optimal performance is essential,
-    consider changing 'N'/chunk size of this dualcache to $chunksize."
+    consider changing 'N'/chunk size of this DiffCache to $chunksize."
     resize!(dc.dual_du, nelem)
 end
 
@@ -183,7 +183,7 @@ function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     return buf
 end
 
-export FixedSizeDiffCache, DiffCache, LazyBufferCache
+export FixedSizeDiffCache, DiffCache, LazyBufferCache, dualcache
 export get_tmp
 
 end

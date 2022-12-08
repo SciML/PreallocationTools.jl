@@ -16,6 +16,15 @@ function test(u0, dual, chunk_size)
            result_dual2
 end
 
+function structequal(struct1, struct2)
+    if typeof(struct1) == typeof(struct2)
+        fn = fieldnames(typeof(struct1))
+        all(getfield(a, fn[i]) == getfield(b, fn[i]) for i in eachindex(fn))
+    else
+        return false
+    end
+end
+
 #Setup Base Array tests
 chunk_size = 5
 u0 = ones(5, 5)
@@ -140,3 +149,9 @@ tmp_dual_du_APN = get_tmp(cache_AP, dual_AP[1])
 @test size(tmp_dual_du_APN) == size(u0_AP)
 @test_broken typeof(tmp_dual_du_APN) == typeof(dual_AP)
 @test eltype(tmp_dual_du_APN) == eltype(dual_AP)
+
+a = PreallocationTools.DiffCache(zeros(4), 4)
+b = PreallocationTools.DiffCache(zeros(4), Val{4}())
+c = PreallocationTools.DiffCache(zeros(4), Val{4})
+@test structequal(a, b)
+@test structequal(a, b)
