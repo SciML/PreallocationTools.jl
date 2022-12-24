@@ -20,7 +20,7 @@ function loglik(θ, data, integrator)
     λ, σ, u0 = θ
     integrator.p = λ
     reinit!(integrator, u0)
-    solve!(integrator, Tsit5())
+    solve!(integrator)
     ε = yᵒ .- integrator.sol.u
     ℓ = -0.5n * log(2π * σ^2) - 0.5 / σ^2 * sum(ε .^ 2)
 end
