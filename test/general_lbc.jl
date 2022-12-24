@@ -2,9 +2,9 @@ using Random, OrdinaryDiffEq, LinearAlgebra, Optimization, OptimizationOptimJL,
       PreallocationTools
 
 lbc = GeneralLazyBufferCache(function (p)
-                                 DifferentialEquations.init(ODEProblem(ode_fnc, y₀,
-                                                                       (0.0, T), p),
-                                                            Tsit5(); saveat = t)
+                                 init(ODEProblem(ode_fnc, y₀,
+                                                 (0.0, T), p),
+                                      Tsit5(); saveat = t)
                              end)
 
 Random.seed!(2992999)
