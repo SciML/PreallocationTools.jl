@@ -205,7 +205,7 @@ struct GeneralLazyBufferCache{F <: Function}
     GeneralLazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
 
-function Base.getindex(b::GeneralLazyBufferCache, u::T) where T
+function Base.getindex(b::GeneralLazyBufferCache, u::T) where {T}
     get!(b.bufs, T) do
         b.f(u)
     end
