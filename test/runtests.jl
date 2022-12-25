@@ -16,6 +16,7 @@ if GROUP == "All" || GROUP == "Core"
     @safetestset "DiffCache Resizing" begin include("core_resizing.jl") end
     @safetestset "DiffCache Nested Duals" begin include("core_nesteddual.jl") end
     @safetestset "DiffCache Sparsity Support" begin include("sparsity_support.jl") end
+    @safetestset "GeneralLazyBufferCache" begin include("general_lbc.jl") end
 end
 
 if !is_APPVEYOR && GROUP == "GPU"
