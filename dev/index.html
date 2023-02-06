@@ -116,42 +116,43 @@ fnc = OptimizationFunction(negloglik, Optimization.AutoForwardDiff())
 ε = zeros(n)
 prob = OptimizationProblem(fnc, θ₀, (yᵒ, n, ε), lb=[-10.0, 1e-6, 0.5], ub=[10.0, 10.0, 25.0])
 solve(prob, LBFGS())</code></pre><h2 id="Similar-Projects"><a class="docs-heading-anchor" href="#Similar-Projects">Similar Projects</a><a id="Similar-Projects-1"></a><a class="docs-heading-anchor-permalink" href="#Similar-Projects" title="Permalink"></a></h2><p><a href="https://github.com/oxinabox/AutoPreallocation.jl">AutoPreallocation.jl</a> tries to do this automatically at the compiler level. <a href="https://github.com/FluxML/Alloc.jl">Alloc.jl</a> tries to do this with a bump allocator.</p><h2 id="Contributing"><a class="docs-heading-anchor" href="#Contributing">Contributing</a><a id="Contributing-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing" title="Permalink"></a></h2><ul><li>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</li><li>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</li><li>There are a few community forums:<ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>On the <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/PreallocationTools.jl/PreallocationTools.jl/docs/Project.toml`
-  [e30172f5] Documenter v0.27.23
-  [d236fae5] PreallocationTools v0.4.8 `~/work/PreallocationTools.jl/PreallocationTools.jl`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.8.4
-Commit 00177ebc4fc (2022-12-23 21:32 UTC)
+  [e30172f5] Documenter v0.27.24
+  [d236fae5] PreallocationTools v0.4.8 `~/work/PreallocationTools.jl/PreallocationTools.jl`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.8.5
+Commit 17cfb8e65ea (2023-01-08 06:45 UTC)
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 2 × Intel(R) Xeon(R) CPU E5-2673 v3 @ 2.40GHz
+  CPU: 2 × Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz
   WORD_SIZE: 64
   LIBM: libopenlibm
-  LLVM: libLLVM-13.0.1 (ORCJIT, haswell)
+  LLVM: libLLVM-13.0.1 (ORCJIT, icelake-server)
   Threads: 1 on 2 virtual cores</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/PreallocationTools.jl/PreallocationTools.jl/docs/Manifest.toml`
   [a4c015fc] ANSIColoredPrinters v0.0.1
-  [79e6a3ab] Adapt v3.4.0
-  [30b0a656] ArrayInterfaceCore v0.1.27
-  [d360d2e6] ChainRulesCore v1.15.6
-  [9e997f8a] ChangesOfVariables v0.1.4
+  [79e6a3ab] Adapt v3.5.0
+  [30b0a656] ArrayInterfaceCore v0.1.29
+  [d360d2e6] ChainRulesCore v1.15.7
+  [9e997f8a] ChangesOfVariables v0.1.5
   [bbf7d656] CommonSubexpressions v0.3.0
-  [34da2185] Compat v4.5.0
+  [34da2185] Compat v4.6.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.12.2
   [ffbed154] DocStringExtensions v0.9.3
-  [e30172f5] Documenter v0.27.23
+  [e30172f5] Documenter v0.27.24
   [f6369f11] ForwardDiff v0.10.34
   [b5f81e59] IOCapture v0.2.2
   [3587e190] InverseFunctions v0.1.8
   [92d709cd] IrrationalConstants v0.1.1
   [692b3bcd] JLLWrappers v1.4.1
   [682c06a0] JSON v0.21.3
-  [2ab3a3ac] LogExpFunctions v0.3.19
+  [2ab3a3ac] LogExpFunctions v0.3.21
   [1914dd2f] MacroTools v0.5.10
   [77ba4419] NaNMath v1.0.1
-  [69de0a69] Parsers v2.5.2
+  [69de0a69] Parsers v2.5.4
   [d236fae5] PreallocationTools v0.4.8 `~/work/PreallocationTools.jl/PreallocationTools.jl`
   [21216c6a] Preferences v1.3.0
-  [66db9d55] SnoopPrecompile v1.0.1
+  [ae029012] Requires v1.3.0
+  [66db9d55] SnoopPrecompile v1.0.3
   [276daf66] SpecialFunctions v2.1.7
-  [90137ffa] StaticArrays v1.5.11
+  [90137ffa] StaticArrays v1.5.12
   [1e83bf80] StaticArraysCore v1.4.0
   [efe28fd5] OpenSpecFun_jll v0.5.5+0
   [0dad84c5] ArgTools v1.1.1
@@ -196,4 +197,4 @@ Platform Info:
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0</code></pre></details>You can also download the
 <a href="https://github.com/SciML/PreallocationTools.jl/tree/gh-pages/v0.4.8/assets/Manifest.toml">manifest</a> file and the
-<a href="https://github.com/SciML/PreallocationTools.jl/tree/gh-pages/v0.4.8/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="preallocationtools/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Sunday 25 December 2022 00:31">Sunday 25 December 2022</span>. Using Julia version 1.8.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<a href="https://github.com/SciML/PreallocationTools.jl/tree/gh-pages/v0.4.8/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="preallocationtools/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Monday 6 February 2023 22:38">Monday 6 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
