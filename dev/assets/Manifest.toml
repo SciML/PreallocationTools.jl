@@ -233,7 +233,7 @@ version = "1.8.0"
 deps = ["Adapt", "ArrayInterfaceCore", "ForwardDiff", "Requires"]
 path = "/home/runner/work/PreallocationTools.jl/PreallocationTools.jl"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
-version = "0.4.9"
+version = "0.4.10"
 
 [[deps.Preferences]]
 deps = ["TOML"]
