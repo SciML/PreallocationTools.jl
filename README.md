@@ -199,7 +199,7 @@ FixedSizeDiffCache(u::AbstractArray, chunk_size = Val{ForwardDiff.pickchunksize(
 FixedSizeDiffCache(u::AbstractArray, chunk_size::Integer)
 ```
 
-Note that the `FixedSizeDiffCache` can support duals that are of a small chunk size than
+Note that the `FixedSizeDiffCache` can support duals that are of a smaller chunk size than
 the preallocated ones, but not a larger size. Nested duals are not supported with this
 construct.
 
@@ -233,11 +233,6 @@ end
 prob = ODEProblem(foo, ones(5, 5), (0., 1.0), (ones(5,5), LazyBufferCache()))
 solve(prob, TRBDF2())
 ```
-
-### Note About ReverseDiff Support for LazyBuffer
-
-ReverseDiff support is done in SciMLSensitivity.jl to reduce the AD requirements on this package.
-Load that package if ReverseDiff overloads are required.
 
 ## GeneralLazyBufferCache
 
