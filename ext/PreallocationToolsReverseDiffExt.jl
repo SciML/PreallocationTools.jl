@@ -1,7 +1,7 @@
 module PreallocationToolsReverseDiffExt
 
 using PreallocationTools
-import ReverseDiff
+isdefined(Base, :get_extension) ? (import ReverseDiff) : (import ..ReverseDiff)
 
 # PreallocationTools https://github.com/SciML/PreallocationTools.jl/issues/39
 function Base.getindex(b::PreallocationTools.LazyBufferCache, u::ReverseDiff.TrackedArray)
