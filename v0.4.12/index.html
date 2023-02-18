@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · PreallocationTools.jl</title><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://docs.sciml.ai/PreallocationTools/stable/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script><link href="assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.png" alt="PreallocationTools.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>PreallocationTools.jl</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#DiffCache"><span>DiffCache</span></a></li><li><a class="tocitem" href="#FixedSizeDiffCache"><span>FixedSizeDiffCache</span></a></li><li><a class="tocitem" href="#LazyBufferCache"><span>LazyBufferCache</span></a></li><li><a class="tocitem" href="#GeneralLazyBufferCache"><span>GeneralLazyBufferCache</span></a></li><li><a class="tocitem" href="#Similar-Projects"><span>Similar Projects</span></a></li><li><a class="tocitem" href="#Contributing"><span>Contributing</span></a></li><li><a class="tocitem" href="#Reproducibility"><span>Reproducibility</span></a></li></ul></li><li><a class="tocitem" href="preallocationtools/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/SciML/PreallocationTools.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="PreallocationTools.jl"><a class="docs-heading-anchor" href="#PreallocationTools.jl">PreallocationTools.jl</a><a id="PreallocationTools.jl-1"></a><a class="docs-heading-anchor-permalink" href="#PreallocationTools.jl" title="Permalink"></a></h1><p>PreallocationTools.jl is a set of tools for helping build non-allocating pre-cached functions for high-performance computing in Julia. Its tools handle edge cases of automatic differentiation to make it easier for users to get high performance even in the cases where code generation may change the function that is being called.</p><h2 id="DiffCache"><a class="docs-heading-anchor" href="#DiffCache">DiffCache</a><a id="DiffCache-1"></a><a class="docs-heading-anchor-permalink" href="#DiffCache" title="Permalink"></a></h2><p><code>DiffCache</code> is a method for generating doubly-preallocated vectors which are compatible with non-allocating forward-mode automatic differentiation by ForwardDiff.jl. Since ForwardDiff uses chunked duals in its forward pass, two vector sizes are required in order for the arrays to be properly defined. <code>DiffCache</code> creates a dispatching type to solve this, so that by passing a qualifier it can automatically switch between the required cache. This method is fully type-stable and non-dynamic, made for when the highest performance is needed.</p><h3 id="Using-DiffCache"><a class="docs-heading-anchor" href="#Using-DiffCache">Using DiffCache</a><a id="Using-DiffCache-1"></a><a class="docs-heading-anchor-permalink" href="#Using-DiffCache" title="Permalink"></a></h3><pre><code class="language-julia hljs">DiffCache(u::AbstractArray, N::Int=ForwardDiff.pickchunksize(length(u)); levels::Int = 1)
+DiffCache(u::AbstractArray, N::AbstractArray{&lt;:Int})</code></pre><p>The <code>DiffCache</code> function builds a <code>DiffCache</code> object that stores both a version of the cache for <code>u</code> and for the <code>Dual</code> version of <code>u</code>, allowing use of pre-cached vectors with forward-mode automatic differentiation. Note that <code>DiffCache</code>, due to its design, is only compatible with arrays that contain concretely typed elements.</p><p>To access the caches, one uses:</p><pre><code class="language-julia hljs">get_tmp(tmp::DiffCache, u)</code></pre><p>When <code>u</code> has an element subtype of <code>Dual</code> numbers, then it returns the <code>Dual</code> version of the cache. Otherwise it returns the standard cache (for use in the calls without automatic differentiation).</p><p>In order to preallocate to the right size, the <code>DiffCache</code> needs to be specified to have the correct <code>N</code> matching the chunk size of the dual numbers or larger. If the chunk size <code>N</code> specified is too large, <code>get_tmp</code> will automatically resize when dispatching; this remains type-stable and non-allocating, but comes at the expense of additional memory.</p><p>In a differential equation, optimization, etc., the default chunk size is computed from the state vector <code>u</code>, and thus if one creates the <code>DiffCache</code> via <code>DiffCache(u)</code> it will match the default chunking of the solver libraries.</p><p><code>DiffCache</code> is also compatible with nested automatic differentiation calls through the <code>levels</code> keyword (<code>N</code> for each level computed using based on the size of the state vector) or by specifying <code>N</code> as an array of integers of chunk sizes, which enables full control of chunk sizes on all differentation levels.</p><h3 id="DiffCache-Example-1:-Direct-Usage"><a class="docs-heading-anchor" href="#DiffCache-Example-1:-Direct-Usage">DiffCache Example 1: Direct Usage</a><a id="DiffCache-Example-1:-Direct-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#DiffCache-Example-1:-Direct-Usage" title="Permalink"></a></h3><pre><code class="language-julia hljs">using ForwardDiff, PreallocationTools
+randmat = rand(5, 3)
+sto = similar(randmat)
+stod = DiffCache(sto)
+
+function claytonsample!(sto, τ, α; randmat=randmat)
+    sto = get_tmp(sto, τ)
+    sto .= randmat
+    τ == 0 &amp;&amp; return sto
+
+    n = size(sto, 1)
+    for i in 1:n
+        v = sto[i, 2]
+        u = sto[i, 1]
+        sto[i, 1] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)*α
+        sto[i, 2] = (1 - u^(-τ) + u^(-τ)*v^(-(τ/(1 + τ))))^(-1/τ)
+    end
+    return sto
+end
+
+ForwardDiff.derivative(τ -&gt; claytonsample!(stod, τ, 0.0), 0.3)
+ForwardDiff.jacobian(x -&gt; claytonsample!(stod, x[1], x[2]), [0.3; 0.0])</code></pre><p>In the above, the chunk size of the dual numbers has been selected based on the size of <code>randmat</code>, resulting in a chunk size of 8 in this case. However, since the derivative is calculated with respect to τ and the Jacobian is calculated with respect to τ and α, specifying the <code>DiffCache</code> with <code>stod = DiffCache(sto, 1)</code> or <code>stod = DiffCache(sto, 2)</code>, respectively, would have been the most memory efficient way of performing these calculations (only really relevant for much larger problems).</p><h3 id="DiffCache-Example-2:-ODEs"><a class="docs-heading-anchor" href="#DiffCache-Example-2:-ODEs">DiffCache Example 2: ODEs</a><a id="DiffCache-Example-2:-ODEs-1"></a><a class="docs-heading-anchor-permalink" href="#DiffCache-Example-2:-ODEs" title="Permalink"></a></h3><pre><code class="language-julia hljs">using LinearAlgebra, OrdinaryDiffEq
+function foo(du, u, (A, tmp), t)
+    mul!(tmp, A, u)
+    @. du = u + tmp
+    nothing
+end
+prob = ODEProblem(foo, ones(5, 5), (0., 1.0), (ones(5,5), zeros(5,5)))
+solve(prob, TRBDF2())</code></pre><p>fails because <code>tmp</code> is only real numbers, but during automatic differentiation we need <code>tmp</code> to be a cache of dual numbers. Since <code>u</code> is the value that will have the dual numbers, we dispatch based on that:</p><pre><code class="language-julia hljs">using LinearAlgebra, OrdinaryDiffEq, PreallocationTools
+function foo(du, u, (A, tmp), t)
+    tmp = get_tmp(tmp, u)
+    mul!(tmp, A, u)
+    @. du = u + tmp
+    nothing
+end
+chunk_size = 5
+prob = ODEProblem(foo, ones(5, 5), (0., 1.0), (ones(5,5), DiffCache(zeros(5,5), chunk_size)))
+solve(prob, TRBDF2(chunk_size=chunk_size))</code></pre><p>or just using the default chunking:</p><pre><code class="language-julia hljs">using LinearAlgebra, OrdinaryDiffEq, PreallocationTools
+function foo(du, u, (A, tmp), t)
+    tmp = get_tmp(tmp, u)
+    mul!(tmp, A, u)
+    @. du = u + tmp
+    nothing
+end
+chunk_size = 5
+prob = ODEProblem(foo, ones(5, 5), (0., 1.0), (ones(5,5), DiffCache(zeros(5,5))))
+solve(prob, TRBDF2())</code></pre><h3 id="DiffCache-Example-3:-Nested-AD-calls-in-an-optimization-problem-involving-a-Hessian-matrix"><a class="docs-heading-anchor" href="#DiffCache-Example-3:-Nested-AD-calls-in-an-optimization-problem-involving-a-Hessian-matrix">DiffCache Example 3: Nested AD calls in an optimization problem involving a Hessian matrix</a><a id="DiffCache-Example-3:-Nested-AD-calls-in-an-optimization-problem-involving-a-Hessian-matrix-1"></a><a class="docs-heading-anchor-permalink" href="#DiffCache-Example-3:-Nested-AD-calls-in-an-optimization-problem-involving-a-Hessian-matrix" title="Permalink"></a></h3><pre><code class="language-julia hljs">using LinearAlgebra, OrdinaryDiffEq, PreallocationTools, Optim, Optimization
+function foo(du, u, p, t)
+    tmp = p[2]
+    A = reshape(p[1], size(tmp.du))
+    tmp = get_tmp(tmp, u)
+    mul!(tmp, A, u)
+    @. du = u + tmp
+    nothing
+end
+
+coeffs = -collect(0.1:0.1:0.4)
+cache = DiffCache(zeros(2,2), levels = 3)
+prob = ODEProblem(foo, ones(2, 2), (0., 1.0), (coeffs, cache))
+realsol = solve(prob, TRBDF2(), saveat = 0.0:0.1:10.0, reltol = 1e-8)
+
+function objfun(x, prob, realsol, cache)
+    prob = remake(prob, u0 = eltype(x).(prob.u0), p = (x, cache))
+    sol = solve(prob, TRBDF2(), saveat = 0.0:0.1:10.0, reltol = 1e-8)
+
+    ofv = 0.0
+    if any((s.retcode != :Success for s in sol))
+        ofv = 1e12
+    else
+        ofv = sum((sol.-realsol).^2)
+    end
+    return ofv
+end
+fn(x,p) = objfun(x, p[1], p[2], p[3])
+optfun = OptimizationFunction(fn, Optimization.AutoForwardDiff())
+optprob = OptimizationProblem(optfun, zeros(length(coeffs)), (prob, realsol, cache))
+solve(optprob, Newton())</code></pre><p>Solves an optimization problem for the coefficients, <code>coeffs</code>, appearing in a differential equation. The optimization is done with <a href="https://github.com/JuliaNLSolvers/Optim.jl">Optim.jl</a>&#39;s <code>Newton()</code> algorithm. Since this involves automatic differentiation in the ODE solver and the calculation of Hessians, three automatic differentiations are nested within each other. Therefore, the <code>DiffCache</code> is specified with <code>levels = 3</code>.</p><h2 id="FixedSizeDiffCache"><a class="docs-heading-anchor" href="#FixedSizeDiffCache">FixedSizeDiffCache</a><a id="FixedSizeDiffCache-1"></a><a class="docs-heading-anchor-permalink" href="#FixedSizeDiffCache" title="Permalink"></a></h2><p><code>FixedSizeDiffCache</code> is a lot like <code>DiffCache</code>, but it stores dual numbers in its caches instead of a flat array. Because of this, it can avoid a view, making it a little bit more performant for generating caches of non-<code>Array</code> types. However, it is a lot less flexible than <code>DiffCache</code>, and is thus only recommended for cases where the chunk size is known in advance (for example, ODE solvers) and where <code>u</code> is not an <code>Array</code>.</p><p>The interface is almost exactly the same, except with the constructor:</p><pre><code class="language-julia hljs">FixedSizeDiffCache(u::AbstractArray, chunk_size = Val{ForwardDiff.pickchunksize(length(u))})
+FixedSizeDiffCache(u::AbstractArray, chunk_size::Integer)</code></pre><p>Note that the <code>FixedSizeDiffCache</code> can support duals that are of a small chunk size than the preallocated ones, but not a larger size. Nested duals are not supported with this construct.</p><h2 id="LazyBufferCache"><a class="docs-heading-anchor" href="#LazyBufferCache">LazyBufferCache</a><a id="LazyBufferCache-1"></a><a class="docs-heading-anchor-permalink" href="#LazyBufferCache" title="Permalink"></a></h2><pre><code class="language-julia hljs">LazyBufferCache(f::F=identity)</code></pre><p>A <code>LazyBufferCache</code> is a <code>Dict</code>-like type for the caches which automatically defines new cache arrays on demand when they are required. The function <code>f</code> maps <code>size_of_cache = f(size(u))</code>, which by default creates cache arrays of the same size.</p><p>Note that <code>LazyBufferCache</code> does cause a dynamic dispatch, though it is type-stable. This gives it a ~100ns overhead, and thus on very small problems it can reduce performance, but for any sufficiently sized calculation (e.g. &gt;20 ODEs) this may not be even measurable. The upside of <code>LazyBufferCache</code> is that the user does not have to worry about potential issues with chunk sizes and such: <code>LazyBufferCache</code> is much easier!</p><h3 id="Example"><a class="docs-heading-anchor" href="#Example">Example</a><a id="Example-1"></a><a class="docs-heading-anchor-permalink" href="#Example" title="Permalink"></a></h3><pre><code class="language-julia hljs">using LinearAlgebra, OrdinaryDiffEq, PreallocationTools
+function foo(du, u, (A, lbc), t)
+    tmp = lbc[u]
+    mul!(tmp, A, u)
+    @. du = u + tmp
+    nothing
+end
+prob = ODEProblem(foo, ones(5, 5), (0., 1.0), (ones(5,5), LazyBufferCache()))
+solve(prob, TRBDF2())</code></pre><h3 id="Note-About-ReverseDiff-Support-for-LazyBuffer"><a class="docs-heading-anchor" href="#Note-About-ReverseDiff-Support-for-LazyBuffer">Note About ReverseDiff Support for LazyBuffer</a><a id="Note-About-ReverseDiff-Support-for-LazyBuffer-1"></a><a class="docs-heading-anchor-permalink" href="#Note-About-ReverseDiff-Support-for-LazyBuffer" title="Permalink"></a></h3><p>ReverseDiff support is done in SciMLSensitivity.jl to reduce the AD requirements on this package. Load that package if ReverseDiff overloads are required.</p><h2 id="GeneralLazyBufferCache"><a class="docs-heading-anchor" href="#GeneralLazyBufferCache">GeneralLazyBufferCache</a><a id="GeneralLazyBufferCache-1"></a><a class="docs-heading-anchor-permalink" href="#GeneralLazyBufferCache" title="Permalink"></a></h2><pre><code class="language-julia hljs">GeneralLazyBufferCache(f=identity)</code></pre><p>A <code>GeneralLazyBufferCache</code> is a <code>Dict</code>-like type for the caches which automatically defines new caches on demand when they are required. The function <code>f</code> generates the cache matching for the type of <code>u</code>, and subsequent indexing reuses that cache if that type of <code>u</code> has already ben seen.</p><p>Note that <code>LazyBufferCache</code> does cause a dynamic dispatch and its return is not type-inferred. This means it&#39;s the slowest of the preallocation methods, but it&#39;s the most general.</p><h3 id="Example-2"><a class="docs-heading-anchor" href="#Example-2">Example</a><a class="docs-heading-anchor-permalink" href="#Example-2" title="Permalink"></a></h3><p>In all of the previous cases our cache was an array. However, in this case we want to preallocate a DifferentialEquations <code>ODEIntegrator</code> object. This object is the one created via <code>DifferentialEquations.init(ODEProblem(ode_fnc, y₀, (0.0, T), p), Tsit5(); saveat = t)</code>, and we want to optimize <code>p</code> in a way that changes its type to ForwardDiff. Thus what we can do is make a GeneralLazyBufferCache which holds these integrator objects, defined by <code>p</code>, and indexing it with <code>p</code> in order to retrieve the cache. The first time it&#39;s called it will build the integrator, and  in subsequent calls it will reuse the cache.</p><p>Defining the cache as a function of <code>p</code> to build an integrator thus looks like:</p><pre><code class="language-julia hljs">lbc = GeneralLazyBufferCache(function (p)
+    DifferentialEquations.init(ODEProblem(ode_fnc, y₀, (0.0, T), p), Tsit5(); saveat = t)
+end)</code></pre><p>then <code>lbc[p]</code> will be smart and reuse the caches. A full example looks like the following:</p><pre><code class="language-julia hljs">using Random, DifferentialEquations, LinearAlgebra, Optimization, OptimizationNLopt, OptimizationOptimJL, PreallocationTools
+
+lbc = GeneralLazyBufferCache(function (p)
+    DifferentialEquations.init(ODEProblem(ode_fnc, y₀, (0.0, T), p), Tsit5(); saveat = t)
+end)
+
+Random.seed!(2992999)
+λ, y₀, σ = -0.5, 15.0, 0.1
+T, n = 5.0, 200
+Δt = T / n
+t = [j * Δt for j in 0:n]
+y = y₀ * exp.(λ * t)
+yᵒ = y .+ [0.0, σ * randn(n)...]
+ode_fnc(u, p, t) = p * u
+function loglik(θ, data, integrator)
+    yᵒ, n, ε = data
+    λ, σ, u0 = θ
+    integrator.p = λ
+    reinit!(integrator, u0)
+    solve!(integrator)
+    ε = yᵒ .- integrator.sol.u
+    ℓ = -0.5n * log(2π * σ^2) - 0.5 / σ^2 * sum(ε.^2)
+end
+θ₀ = [-1.0, 0.5, 19.73]
+negloglik = (θ, p) -&gt; -loglik(θ, p, lbc[θ[1]])
+fnc = OptimizationFunction(negloglik, Optimization.AutoForwardDiff())
+ε = zeros(n)
+prob = OptimizationProblem(fnc, θ₀, (yᵒ, n, ε), lb=[-10.0, 1e-6, 0.5], ub=[10.0, 10.0, 25.0])
+solve(prob, LBFGS())</code></pre><h2 id="Similar-Projects"><a class="docs-heading-anchor" href="#Similar-Projects">Similar Projects</a><a id="Similar-Projects-1"></a><a class="docs-heading-anchor-permalink" href="#Similar-Projects" title="Permalink"></a></h2><p><a href="https://github.com/oxinabox/AutoPreallocation.jl">AutoPreallocation.jl</a> tries to do this automatically at the compiler level. <a href="https://github.com/FluxML/Alloc.jl">Alloc.jl</a> tries to do this with a bump allocator.</p><h2 id="Contributing"><a class="docs-heading-anchor" href="#Contributing">Contributing</a><a id="Contributing-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing" title="Permalink"></a></h2><ul><li>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</li><li>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</li><li>There are a few community forums:<ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>On the <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/PreallocationTools.jl/PreallocationTools.jl/docs/Project.toml`
+  [e30172f5] Documenter v0.27.24
+  [d236fae5] PreallocationTools v0.4.12 `~/work/PreallocationTools.jl/PreallocationTools.jl`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.8.5
+Commit 17cfb8e65ea (2023-01-08 06:45 UTC)
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 2 × Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-13.0.1 (ORCJIT, icelake-server)
+  Threads: 1 on 2 virtual cores</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/PreallocationTools.jl/PreallocationTools.jl/docs/Manifest.toml`
+  [a4c015fc] ANSIColoredPrinters v0.0.1
+  [79e6a3ab] Adapt v3.5.0
+  [4fba245c] ArrayInterface v7.0.0
+  [d360d2e6] ChainRulesCore v1.15.7
+  [9e997f8a] ChangesOfVariables v0.1.6
+  [bbf7d656] CommonSubexpressions v0.3.0
+  [34da2185] Compat v4.6.0
+  [163ba53b] DiffResults v1.1.0
+  [b552c78f] DiffRules v1.12.2
+  [ffbed154] DocStringExtensions v0.9.3
+  [e30172f5] Documenter v0.27.24
+  [f6369f11] ForwardDiff v0.10.34
+  [b5f81e59] IOCapture v0.2.2
+  [3587e190] InverseFunctions v0.1.8
+  [92d709cd] IrrationalConstants v0.1.1
+  [692b3bcd] JLLWrappers v1.4.1
+  [682c06a0] JSON v0.21.3
+  [2ab3a3ac] LogExpFunctions v0.3.22
+  [1914dd2f] MacroTools v0.5.10
+  [77ba4419] NaNMath v1.0.2
+  [69de0a69] Parsers v2.5.7
+  [d236fae5] PreallocationTools v0.4.12 `~/work/PreallocationTools.jl/PreallocationTools.jl`
+  [21216c6a] Preferences v1.3.0
+  [ae029012] Requires v1.3.0
+  [66db9d55] SnoopPrecompile v1.0.3
+  [276daf66] SpecialFunctions v2.1.7
+  [90137ffa] StaticArrays v1.5.15
+  [1e83bf80] StaticArraysCore v1.4.0
+  [efe28fd5] OpenSpecFun_jll v0.5.5+0
+  [0dad84c5] ArgTools v1.1.1
+  [56f22d72] Artifacts
+  [2a0f44e3] Base64
+  [ade2ca70] Dates
+  [f43a241f] Downloads v1.6.0
+  [7b1f6079] FileWatching
+  [b77e0a4c] InteractiveUtils
+  [b27032c2] LibCURL v0.6.3
+  [76f85450] LibGit2
+  [8f399da3] Libdl
+  [37e2e46d] LinearAlgebra
+  [56ddb016] Logging
+  [d6f4376e] Markdown
+  [a63ad114] Mmap
+  [ca575930] NetworkOptions v1.2.0
+  [44cfe95a] Pkg v1.8.0
+  [de0858da] Printf
+  [3fa0cd96] REPL
+  [9a3f8284] Random
+  [ea8e919c] SHA v0.7.0
+  [9e88b42a] Serialization
+  [6462fe0b] Sockets
+  [2f01184e] SparseArrays
+  [10745b16] Statistics
+  [4607b0f0] SuiteSparse
+  [fa267f1f] TOML v1.0.0
+  [a4e569a6] Tar v1.10.1
+  [8dfed614] Test
+  [cf7118a7] UUIDs
+  [4ec0a83e] Unicode
+  [e66e0078] CompilerSupportLibraries_jll v1.0.1+0
+  [deac9b47] LibCURL_jll v7.84.0+0
+  [29816b5a] LibSSH2_jll v1.10.2+0
+  [c8ffd9c3] MbedTLS_jll v2.28.0+0
+  [14a3606d] MozillaCACerts_jll v2022.2.1
+  [4536629a] OpenBLAS_jll v0.3.20+0
+  [05823500] OpenLibm_jll v0.8.1+0
+  [83775a58] Zlib_jll v1.2.12+3
+  [8e850b90] libblastrampoline_jll v5.1.1+0
+  [8e850ede] nghttp2_jll v1.48.0+0
+  [3f19e933] p7zip_jll v17.4.0+0</code></pre></details>You can also download the
+<a href="https://github.com/SciML/PreallocationTools.jl/tree/gh-pages/v0.4.12/assets/Manifest.toml">manifest</a> file and the
+<a href="https://github.com/SciML/PreallocationTools.jl/tree/gh-pages/v0.4.12/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="preallocationtools/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Saturday 18 February 2023 15:09">Saturday 18 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
