@@ -1,6 +1,6 @@
 module PreallocationTools
 
-using ForwardDiff, ArrayInterfaceCore, Adapt
+using ForwardDiff, ArrayInterface, Adapt
 
 struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
@@ -10,7 +10,7 @@ end
 
 function FixedSizeDiffCache(u::AbstractArray{T}, siz,
                             ::Type{Val{chunk_size}}) where {T, chunk_size}
-    x = ArrayInterfaceCore.restructure(u,
+    x = ArrayInterface.restructure(u,
                                        zeros(ForwardDiff.Dual{nothing, T, chunk_size},
                                              siz...))
     xany = Any[]
@@ -76,7 +76,7 @@ struct DiffCache{T <: AbstractArray, S <: AbstractArray}
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
-    x = adapt(ArrayInterfaceCore.parameterless_type(u),
+    x = adapt(ArrayInterface.parameterless_type(u),
               zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
     xany = Any[]
     DiffCache(u, x, xany)
@@ -147,7 +147,7 @@ function _restructure(normal_cache::Array, duals)
 end
 
 function _restructure(normal_cache::AbstractArray, duals)
-    ArrayInterfaceCore.restructure(normal_cache, duals)
+    ArrayInterface.restructure(normal_cache, duals)
 end
 
 function enlargediffcache!(dc, nelem) #warning comes only once per DiffCache.
