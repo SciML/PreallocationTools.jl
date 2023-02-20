@@ -146,7 +146,7 @@ solve(prob, TRBDF2())
 ### DiffCache Example 3: Nested AD calls in an optimization problem involving a Hessian matrix
 
 ```julia
-using LinearAlgebra, OrdinaryDiffEq, PreallocationTools, Optim, Optimization
+using LinearAlgebra, OrdinaryDiffEq, PreallocationTools, Optimization, OptimizationOptimJL
 function foo(du, u, p, t)
     tmp = p[2]
     A = reshape(p[1], size(tmp.du))
