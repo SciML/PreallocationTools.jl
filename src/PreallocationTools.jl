@@ -9,16 +9,15 @@ struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
 end
 
 function FixedSizeDiffCache(u::AbstractArray{T}, siz,
-                            ::Type{Val{chunk_size}}) where {T, chunk_size}
+    ::Type{Val{chunk_size}}) where {T, chunk_size}
     x = ArrayInterface.restructure(u,
-                                       zeros(ForwardDiff.Dual{nothing, T, chunk_size},
-                                             siz...))
+        zeros(ForwardDiff.Dual{nothing, T, chunk_size},
+            siz...))
     xany = Any[]
     FixedSizeDiffCache(deepcopy(u), x, xany)
 end
 
 """
-
 `FixedSizeDiffCache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
 
 Builds a `FixedSizeDiffCache` object that stores both a version of the cache for `u`
@@ -26,9 +25,9 @@ and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 """
 function FixedSizeDiffCache(u::AbstractArray,
-                            ::Type{Val{N}} = Val{ForwardDiff.pickchunksize(length(u))}) where {
-                                                                                               N
-                                                                                               }
+    ::Type{Val{N}} = Val{ForwardDiff.pickchunksize(length(u))}) where {
+    N,
+}
     FixedSizeDiffCache(u, size(u), Val{N})
 end
 
@@ -77,7 +76,7 @@ end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
     x = adapt(ArrayInterface.parameterless_type(u),
-              zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
+        zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
     xany = Any[]
     DiffCache(u, x, xany)
 end
@@ -90,10 +89,9 @@ Builds a `DiffCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation. Supports nested AD via keyword `levels`
 or specifying an array of chunk_sizes.
-
 """
 function DiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u));
-                   levels::Int = 1)
+    levels::Int = 1)
     DiffCache(u, size(u), N * ones(Int, levels))
 end
 DiffCache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
@@ -106,11 +104,9 @@ DiffCache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = DiffCache(u, 
 const dualcache = DiffCache
 
 """
-
 `get_tmp(dc::DiffCache, u)`
 
 Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`.
-
 """
 function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
@@ -166,7 +162,6 @@ end
 A lazily allocated buffer object.  Given an array `u`, `b[u]` returns an array of the
 same type and size `f(size(u))` (defaulting to the same size), which is allocated as
 needed and then cached within `b` for subsequent usage.
-
 """
 struct LazyBufferCache{F <: Function}
     bufs::Dict # a dictionary mapping types to buffers
@@ -217,7 +212,9 @@ export get_tmp
 import Requires
 @static if !isdefined(Base, :get_extension)
     function __init__()
-        Requires.@require ReverseDiff="37e2e3b7-166d-5795-8a7a-e32c996b4267" begin include("../ext/PreallocationToolsReverseDiffExt.jl") end
+        Requires.@require ReverseDiff="37e2e3b7-166d-5795-8a7a-e32c996b4267" begin
+            include("../ext/PreallocationToolsReverseDiffExt.jl")
+        end
     end
 end
 

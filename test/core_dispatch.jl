@@ -1,5 +1,6 @@
-using LinearAlgebra, Test, PreallocationTools, ForwardDiff, LabelledArrays,
-      RecursiveArrayTools
+using LinearAlgebra,
+    Test, PreallocationTools, ForwardDiff, LabelledArrays,
+    RecursiveArrayTools
 
 function test(u0, dual, chunk_size)
     cache = PreallocationTools.DiffCache(u0, chunk_size)
@@ -12,8 +13,8 @@ function test(u0, dual, chunk_size)
     result_dual1 = get_tmp(cache, dual)
     result_dual2 = get_tmp(cache, first(dual))
     return allocs_normal1, allocs_normal2, allocs_dual1, allocs_dual2, result_normal1,
-           result_normal2, result_dual1,
-           result_dual2
+    result_normal2, result_dual1,
+    result_dual2
 end
 
 function structequal(struct1, struct2)
@@ -29,7 +30,7 @@ end
 chunk_size = 5
 u0 = ones(5, 5)
 dual = zeros(ForwardDiff.Dual{ForwardDiff.Tag{nothing, Float64}, Float64,
-                              chunk_size}, 5, 5)
+        chunk_size}, 5, 5)
 results = test(u0, dual, chunk_size)
 #allocation tests
 @test results[1] == 0
@@ -53,7 +54,7 @@ results = test(u0, dual, chunk_size)
 chunk_size = 5
 u0_B = ones(5, 5)
 dual_B = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64,
-                                chunk_size}, 2, 2)
+        chunk_size}, 2, 2)
 cache_B = FixedSizeDiffCache(u0_B, chunk_size)
 tmp_du_BA = get_tmp(cache_B, u0_B)
 tmp_dual_du_BA = get_tmp(cache_B, dual_B)
@@ -76,7 +77,7 @@ tmp_dual_du_BN = get_tmp(cache_B, dual_B[1])
 chunk_size = 4
 u0 = LArray((2, 2); a = 1.0, b = 1.0, c = 1.0, d = 1.0)
 zerodual = zero(ForwardDiff.Dual{ForwardDiff.Tag{nothing, Float64}, Float64,
-                                 chunk_size})
+    chunk_size})
 dual = LArray((2, 2); a = zerodual, b = zerodual, c = zerodual, d = zerodual)
 results = test(u0, dual, chunk_size)
 #allocation tests
@@ -102,9 +103,9 @@ results = test(u0, dual, chunk_size)
 chunk_size = 2
 u0 = ArrayPartition(ones(2, 2), ones(3, 3))
 dual_a = zeros(ForwardDiff.Dual{ForwardDiff.Tag{nothing, Float64}, Float64,
-                                chunk_size}, 2, 2)
+        chunk_size}, 2, 2)
 dual_b = zeros(ForwardDiff.Dual{ForwardDiff.Tag{nothing, Float64}, Float64,
-                                chunk_size}, 3, 3)
+        chunk_size}, 3, 3)
 dual = ArrayPartition(dual_a, dual_b)
 results = test(u0, dual, chunk_size)
 #allocation tests
@@ -128,9 +129,9 @@ results = test(u0, dual, chunk_size)
 
 u0_AP = ArrayPartition(ones(2, 2), ones(3, 3))
 dual_a = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64,
-                                chunk_size}, 2, 2)
+        chunk_size}, 2, 2)
 dual_b = zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float64}, Float64,
-                                chunk_size}, 3, 3)
+        chunk_size}, 3, 3)
 dual_AP = ArrayPartition(dual_a, dual_b)
 cache_AP = FixedSizeDiffCache(u0_AP, chunk_size)
 tmp_du_APA = get_tmp(cache_AP, u0_AP)

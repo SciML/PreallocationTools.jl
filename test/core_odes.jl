@@ -1,5 +1,6 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, LabelledArrays,
-      RecursiveArrayTools
+using LinearAlgebra,
+    OrdinaryDiffEq, Test, PreallocationTools, LabelledArrays,
+    RecursiveArrayTools
 
 # upstream
 OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = Any
@@ -32,7 +33,7 @@ sol = solve(prob, TRBDF2())
 @test sol.retcode == ReturnCode.Success
 
 prob = ODEProblem(foo, ones(5, 5), (0.0, 1.0),
-                  (ones(5, 5), FixedSizeDiffCache(zeros(5, 5))))
+    (ones(5, 5), FixedSizeDiffCache(zeros(5, 5))))
 sol = solve(prob, TRBDF2())
 @test sol.retcode == ReturnCode.Success
 
@@ -44,7 +45,7 @@ function foo(du, u, (A, lbc), t)
     nothing
 end
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(5, 5), (0.0, 1.0),
-                                                  (ones(5, 5), LazyBufferCache()))
+    (ones(5, 5), LazyBufferCache()))
 sol = solve(prob, TRBDF2())
 @test sol.retcode == ReturnCode.Success
 
@@ -61,7 +62,7 @@ end
 #with specified chunk_size
 chunk_size = 4
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0),
-                                                  (A, DiffCache(c, chunk_size)))
+    (A, DiffCache(c, chunk_size)))
 sol = solve(prob, TRBDF2(chunk_size = chunk_size))
 @test sol.retcode == ReturnCode.Success
 #with auto-detected chunk_size
