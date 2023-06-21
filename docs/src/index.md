@@ -3,7 +3,7 @@
 PreallocationTools.jl is a set of tools for helping build non-allocating
 pre-cached functions for high-performance computing in Julia. Its tools handle
 edge cases of automatic differentiation to make it easier for users to get
-high performance even in the cases where code generation may change the
+high performance, even in the cases where code generation may change the
 function that is being called.
 
 ## DiffCache
@@ -37,7 +37,7 @@ get_tmp(tmp::DiffCache, u)
 ```
 
 When `u` has an element subtype of `Dual` numbers, then it returns the `Dual`
-version of the cache. Otherwise it returns the standard cache (for use in the
+version of the cache. Otherwise, it returns the standard cache (for use in the
 calls without automatic differentiation).
 
 In order to preallocate to the right size, the `DiffCache` needs to be specified
@@ -53,7 +53,7 @@ from the state vector `u`, and thus if one creates the `DiffCache` via
 `DiffCache` is also compatible with nested automatic differentiation calls through
 the `levels` keyword (`N` for each level computed using based on the size of the
 state vector) or by specifying `N` as an array of integers of chunk sizes, which
-enables full control of chunk sizes on all differentation levels.
+enables full control of chunk sizes on all differentiation levels.
 
 ### DiffCache Example 1: Direct Usage
 
@@ -182,7 +182,7 @@ is specified with `levels = 3`.
 ## FixedSizeDiffCache
 
 `FixedSizeDiffCache` is a lot like `DiffCache`, but it stores dual numbers in its caches
-instead of a flat array. Because of this, it can avoid a view, making it a little bit
+instead of a flat array. Because of this, it can avoid a view, making it a little
 more performant for generating caches of non-`Array` types. However, it is a lot less
 flexible than `DiffCache`, and is thus only recommended for cases where the chunk size
 is known in advance (for example, ODE solvers) and where `u` is not an `Array`.
@@ -204,7 +204,7 @@ construct.
 LazyBufferCache(f::F = identity)
 ```
 
-A `LazyBufferCache` is a `Dict`-like type for the caches which automatically defines
+A `LazyBufferCache` is a `Dict`-like type for the caches, which automatically defines
 new cache arrays on demand when they are required. The function `f` maps
 `size_of_cache = f(size(u))`, which by default creates cache arrays of the same size.
 
@@ -240,20 +240,20 @@ Load that package if ReverseDiff overloads are required.
 GeneralLazyBufferCache(f = identity)
 ```
 
-A `GeneralLazyBufferCache` is a `Dict`-like type for the caches which automatically defines
+A `GeneralLazyBufferCache` is a `Dict`-like type for the caches, which automatically defines
 new caches on demand when they are required. The function `f` generates the cache matching
 for the type of `u`, and subsequent indexing reuses that cache if that type of `u` has
-already ben seen.
+already been seen.
 
 Note that `LazyBufferCache` does cause a dynamic dispatch and its return is not type-inferred.
 This means it's the slowest of the preallocation methods, but it's the most general.
 
 ### Example
 
-In all of the previous cases our cache was an array. However, in this case we want to preallocate
+In all the previous cases, our cache was an array. However, in this case, we want to preallocate
 a DifferentialEquations `ODEIntegrator` object. This object is the one created via
 `DifferentialEquations.init(ODEProblem(ode_fnc, y₀, (0.0, T), p), Tsit5(); saveat = t)`, and we
-want to optimize `p` in a way that changes its type to ForwardDiff. Thus what we can do is make a
+want to optimize `p` in a way that changes its type to ForwardDiff. Thus, what we can do is make a
 GeneralLazyBufferCache which holds these integrator objects, defined by `p`, and indexing it with
 `p` in order to retrieve the cache. The first time it's called it will build the integrator, and
 in subsequent calls it will reuse the cache.
