@@ -8,8 +8,16 @@ include("pages.jl")
 makedocs(sitename = "PreallocationTools.jl",
     authors = "Chris Rackauckas",
     modules = [PreallocationTools],
-    clean = true,
-    doctest = false,
+    clean = true, doctest = false, linkcheck = true,
+    strict = [
+        :doctest,
+        :linkcheck,
+        :parse_error,
+        :example_block,
+        :cross_references,
+        # Other available options are
+        # :autodocs_block, :cross_references, :docs_block, :eval_block, :example_block, :footnote, :meta_block, :missing_docs, :setup_block
+    ],
     format = Documenter.HTML(assets = ["assets/favicon.ico"],
         canonical = "https://docs.sciml.ai/PreallocationTools/stable/"),
     pages = pages)
