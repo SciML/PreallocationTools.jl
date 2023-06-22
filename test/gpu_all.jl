@@ -1,5 +1,6 @@
-using LinearAlgebra, OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff,
-      ArrayInterfaceCore
+using LinearAlgebra,
+    OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff,
+    ArrayInterfaceCore
 
 # upstream
 OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = Any
@@ -8,7 +9,7 @@ OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = An
 chunk_size = 5
 u0_CU = cu(ones(5, 5))
 dual_CU = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32,
-                                    chunk_size}, 2, 2))
+        chunk_size}, 2, 2))
 dual_N = ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32, 5}(0)
 cache_CU = DiffCache(u0_CU, chunk_size)
 tmp_du_CUA = get_tmp(cache_CU, u0_CU)
@@ -33,7 +34,7 @@ tmp_dual_du_CUN = get_tmp(cache_CU, dual_N)
 chunk_size = 5
 u0_B = cu(ones(5, 5))
 dual_B = cu(zeros(ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32,
-                                   chunk_size}, 2, 2))
+        chunk_size}, 2, 2))
 cache_B = FixedSizeDiffCache(u0_B, chunk_size)
 tmp_du_BA = get_tmp(cache_B, u0_B)
 tmp_dual_du_BA = get_tmp(cache_B, dual_B)
