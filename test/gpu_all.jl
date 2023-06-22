@@ -1,6 +1,5 @@
 using LinearAlgebra,
-    OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff,
-    ArrayInterfaceCore
+    OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff
 
 # upstream
 OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = Any
@@ -16,8 +15,8 @@ tmp_du_CUA = get_tmp(cache_CU, u0_CU)
 tmp_dual_du_CUA = get_tmp(cache_CU, dual_CU)
 tmp_du_CUN = get_tmp(cache_CU, 0.0f0)
 tmp_dual_du_CUN = get_tmp(cache_CU, dual_N)
-@test ArrayInterfaceCore.parameterless_type(typeof(cache_CU.dual_du)) ==
-      ArrayInterfaceCore.parameterless_type(typeof(u0_CU)) #check that dual cache array is a GPU array for performance reasons.
+@test SciMLBase.parameterless_type(typeof(cache_CU.dual_du)) ==
+      SciMLBase.parameterless_type(typeof(u0_CU)) #check that dual cache array is a GPU array for performance reasons.
 @test size(tmp_du_CUA) == size(u0_CU)
 @test typeof(tmp_du_CUA) == typeof(u0_CU)
 @test eltype(tmp_du_CUA) == eltype(u0_CU)
