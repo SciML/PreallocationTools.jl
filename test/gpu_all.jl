@@ -1,6 +1,5 @@
 using LinearAlgebra,
-    OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff,
-    ArrayInterfaceCore
+    OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff
 
 # upstream
 OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = Any
