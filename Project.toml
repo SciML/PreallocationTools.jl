@@ -11,10 +11,24 @@ Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 
 [compat]
 Adapt = "3"
+Aqua = "0.8"
 ArrayInterface = "7"
 ForwardDiff = "0.10.3"
+LabelledArrays = "1"
+LinearAlgebra = "1"
+Optimization = "3"
+OptimizationOptimJL = "0.1"
+OrdinaryDiffEq = "6"
+Pkg = "1"
+Random = "1"
+RecursiveArrayTools = "2"
 Requires = "1.0"
-julia = "1.6"
+ReverseDiff = "1"
+SafeTestsets = "0.1"
+SparseArrays = "1"
+Symbolics = "5"
+Test = "1"
+julia = "1.9"
 
 [weakdeps]
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
@@ -23,6 +37,7 @@ ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 PreallocationToolsReverseDiffExt = "ReverseDiff"
 
 [extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
@@ -38,4 +53,4 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Random", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SparseArrays", "Symbolics"]
+test = ["Aqua", "Random", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SparseArrays", "Symbolics"]
