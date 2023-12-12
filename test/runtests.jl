@@ -11,6 +11,9 @@ function activate_downstream_env()
 end
 
 if GROUP == "All" || GROUP == "Core"
+    @safetestset "Quality Assurance" begin
+        include("qa.jl")
+    end
     @safetestset "DiffCache Dispatch" begin
         include("core_dispatch.jl")
     end
