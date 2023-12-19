@@ -9,8 +9,14 @@ ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 
+[weakdeps]
+ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
+
+[extensions]
+PreallocationToolsReverseDiffExt = "ReverseDiff"
+
 [compat]
-Adapt = "3"
+Adapt = "3, 4"
 Aqua = "0.8"
 ArrayInterface = "7"
 ForwardDiff = "0.10.3"
@@ -29,12 +35,6 @@ SparseArrays = "1"
 Symbolics = "5"
 Test = "1"
 julia = "1.9"
-
-[weakdeps]
-ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
-
-[extensions]
-PreallocationToolsReverseDiffExt = "ReverseDiff"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
