@@ -34,7 +34,7 @@ if GROUP == "All" || GROUP == "Core"
     end
 end
 
-if !is_APPVEYOR && GROUP == "GPU"
+if GROUP == "GPU"
     activate_downstream_env()
     @safetestset "GPU tests" begin
         include("gpu_all.jl")
