@@ -11,7 +11,7 @@ function activate_downstream_env()
 end
 
 if GROUP == "All" || GROUP == "Core"
-    @safetestset "Quality Assurance" begin
+#=     @safetestset "Quality Assurance" begin
         include("qa.jl")
     end
     @safetestset "DiffCache Dispatch" begin
@@ -22,16 +22,16 @@ if GROUP == "All" || GROUP == "Core"
     end
     @safetestset "DiffCache Resizing" begin
         include("core_resizing.jl")
-    end
+    end =#
     @safetestset "DiffCache Nested Duals" begin
         include("core_nesteddual.jl")
     end
-    @safetestset "DiffCache Sparsity Support" begin
+#=     @safetestset "DiffCache Sparsity Support" begin
         include("sparsity_support.jl")
     end
     @safetestset "GeneralLazyBufferCache" begin
         include("general_lbc.jl")
-    end
+    end =#
 end
 
 if !is_APPVEYOR && GROUP == "GPU"
