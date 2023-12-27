@@ -102,8 +102,6 @@ function objfun(x, prob, realsol, cache)
     return ofv
 end
 
-fn(x, p) = objfun(x, p[1], p[2], p[3])
-
 optfun = OptimizationFunction(fn, Optimization.AutoForwardDiff())
 optprob = OptimizationProblem(optfun, zeros(length(coeffs)), (prob, realsol, cache))
 newtonsol2 = solve(optprob, Newton())

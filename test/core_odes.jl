@@ -2,9 +2,6 @@ using LinearAlgebra,
     OrdinaryDiffEq, Test, PreallocationTools, LabelledArrays,
     RecursiveArrayTools
 
-# upstream
-OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = Any
-
 #Base array
 function foo(du, u, (A, tmp), t)
     tmp = get_tmp(tmp, u)
