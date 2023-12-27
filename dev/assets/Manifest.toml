@@ -300,7 +300,7 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 version = "1.10.0"
 
 [[deps.PreallocationTools]]
-deps = ["Adapt", "ArrayInterface", "ForwardDiff", "Requires"]
+deps = ["Adapt", "ArrayInterface", "ForwardDiff"]
 path = "/home/runner/work/PreallocationTools.jl/PreallocationTools.jl"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 version = "0.4.13"
