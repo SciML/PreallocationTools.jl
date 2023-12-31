@@ -69,3 +69,5 @@ end
 
 cache = DiffCache(zeros(2))
 pattern = Symbolics.jacobian_sparsity((r, x) -> residual(r, x, cache), zeros(2), zeros(2))
+@test pattern == sparse([1 0
+                         0 1])
