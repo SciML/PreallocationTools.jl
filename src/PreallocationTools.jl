@@ -75,6 +75,17 @@ function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     end
 end
 
+function get_tmp(dc::FixedSizeDiffCache, ::Type{T}) where T <: Number
+    if promote_type(eltype(dc.du), T) <: eltype(dc.du)
+        dc.du
+    else
+        if length(dc.du) > length(dc.any_du)
+            resize!(dc.any_du, length(dc.du))
+        end
+        _restructure(dc.du, dc.any_du)
+    end
+end
+
 # DiffCache
 
 struct DiffCache{T <: AbstractArray, S <: AbstractArray}
@@ -125,7 +136,7 @@ function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
     _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
 end
 
-function get_tmp(dc::DiffCache, u::Type{T}) where {T <: ForwardDiff.Dual}
+function get_tmp(dc::DiffCache, ::Type{T}) where {T <: ForwardDiff.Dual}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
         enlargediffcache!(dc, nelem)
@@ -143,6 +154,26 @@ end
 
 function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
+        dc.du
+    else
+        if length(dc.du) > length(dc.any_du)
+            resize!(dc.any_du, length(dc.du))
+        end
+
+        _restructure(dc.du, dc.any_du)
+    end
+end
+
+function get_tmp(dc::DiffCache, u::Type{T}) where {T <: ForwardDiff.Dual}
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
+    if nelem > length(dc.dual_du)
+        enlargediffcache!(dc, nelem)
+    end
+    _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+end
+
+function get_tmp(dc::DiffCache, ::Type{T}) where T <: Number
+    if promote_type(eltype(dc.du), T) <: eltype(dc.du)
         dc.du
     else
         if length(dc.du) > length(dc.any_du)
