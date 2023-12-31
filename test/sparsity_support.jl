@@ -52,7 +52,6 @@ B = sparse([1 0; 0 1])
 # Test Nesting https://discourse.julialang.org/t/preallocationtools-jl-with-nested-forwarddiff-and-sparsity-pattern-detection-errors/107897
 
 function foo(x, cache)
-    @show eltype(eltype(x))
     d = get_tmp(cache, x)
 
     d[:] = x
