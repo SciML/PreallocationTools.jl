@@ -303,13 +303,15 @@ version = "1.10.0"
 deps = ["Adapt", "ArrayInterface", "ForwardDiff"]
 path = "/home/runner/work/PreallocationTools.jl/PreallocationTools.jl"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
-version = "0.4.14"
+version = "0.4.15"
 
     [deps.PreallocationTools.extensions]
     PreallocationToolsReverseDiffExt = "ReverseDiff"
+    PreallocationToolsSymbolicsExt = "Symbolics"
 
     [deps.PreallocationTools.weakdeps]
     ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
+    Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
