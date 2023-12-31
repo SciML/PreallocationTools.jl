@@ -164,14 +164,6 @@ function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
     end
 end
 
-function get_tmp(dc::DiffCache, u::Type{T}) where {T <: ForwardDiff.Dual}
-    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
-    if nelem > length(dc.dual_du)
-        enlargediffcache!(dc, nelem)
-    end
-    _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
-end
-
 function get_tmp(dc::DiffCache, ::Type{T}) where T <: Number
     if promote_type(eltype(dc.du), T) <: eltype(dc.du)
         dc.du
