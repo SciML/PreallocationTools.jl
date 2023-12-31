@@ -46,6 +46,15 @@ function get_tmp(dc::FixedSizeDiffCache, u::T) where {T <: ForwardDiff.Dual}
     end
 end
 
+function get_tmp(dc::FixedSizeDiffCache, u::Type{T}) where {T <: ForwardDiff.Dual}
+    x = reinterpret(T, dc.dual_du)
+    if chunksize(T) === chunksize(eltype(dc.dual_du))
+        x
+    else
+        @view x[axes(dc.du)...]
+    end
+end
+
 function get_tmp(dc::FixedSizeDiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
     x = reinterpret(T, dc.dual_du)
     if chunksize(T) === chunksize(eltype(dc.dual_du))
@@ -109,6 +118,14 @@ const dualcache = DiffCache
 Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`.
 """
 function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
+    nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
+    if nelem > length(dc.dual_du)
+        enlargediffcache!(dc, nelem)
+    end
+    _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
+end
+
+function get_tmp(dc::DiffCache, u::Type{T}) where {T <: ForwardDiff.Dual}
     nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
     if nelem > length(dc.dual_du)
         enlargediffcache!(dc, nelem)
