@@ -242,7 +242,7 @@ new caches on demand when they are required. The function `f` generates the cach
 for the type of `u`, and subsequent indexing reuses that cache if that type of `u` has
 already been seen.
 
-Note that `LazyBufferCache` does cause a dynamic dispatch and its return is not type-inferred.
+Note that `GeneralLazyBufferCache`'s return is not type-inferred.
 This means it's the slowest of the preallocation methods, but it's the most general.
 
 ### Example

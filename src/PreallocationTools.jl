@@ -234,7 +234,7 @@ correct using things like function barriers, then this is a general technique th
 is sufficiently fast.
 """
 struct GeneralLazyBufferCache{F <: Function}
-    bufs::Dict # a dictionary mapping types to buffers
+    bufs::Dict{Any, Any} # a dictionary mapping types to buffers
     f::F
     GeneralLazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
