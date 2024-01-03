@@ -218,12 +218,9 @@ A `LazyBufferCache` is a `Dict`-like type for the caches which automatically def
 new cache arrays on demand when they are required. The function `f` maps
 `size_of_cache = f(size(u))`, which by default creates cache arrays of the same size.
 
-Note that `LazyBufferCache` does cause a dynamic dispatch, though it is type-stable.
-This gives it a ~100ns overhead, and thus on very small problems it can reduce
-performance, but for any sufficiently sized calculation (e.g. >20 ODEs) this
-may not be even measurable. The upside of `LazyBufferCache` is that the user does
-not have to worry about potential issues with chunk sizes and such: `LazyBufferCache`
-is much easier!
+Note that `LazyBufferCache` is type-stable and contains no dynamic dispatch. This gives
+it a ~15ns overhead. The upside of `LazyBufferCache` is that the user does not have to
+worry about potential issues with chunk sizes and such: `LazyBufferCache` is much easier!
 
 ### Example
 
@@ -250,7 +247,7 @@ new caches on demand when they are required. The function `f` generates the cach
 for the type of `u`, and subsequent indexing reuses that cache if that type of `u` has
 already ben seen.
 
-Note that `LazyBufferCache` does cause a dynamic dispatch and its return is not type-inferred.
+Note that `GeneralLazyBufferCache`'s return is not type-inferred.
 This means it's the slowest of the preallocation methods, but it's the most general.
 
 ### Example

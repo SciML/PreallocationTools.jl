@@ -204,7 +204,7 @@ same type and size `f(size(u))` (defaulting to the same size), which is allocate
 needed and then cached within `b` for subsequent usage.
 """
 struct LazyBufferCache{F <: Function}
-    bufs::Dict # a dictionary mapping types to buffers
+    bufs::Dict{Any, Any} # a dictionary mapping (type, size) pairs to buffers
     sizemap::F
     LazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
@@ -212,10 +212,9 @@ end
 # override the [] method
 function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     s = b.sizemap(size(u)) # required buffer size
-    buf = get!(b.bufs, (T, s)) do
+    get!(b.bufs, (T, s)) do
         similar(u, s) # buffer to allocate if it was not found in b.bufs
     end::T  # declare type since b.bufs dictionary is untyped
-    return buf
 end
 
 # GeneralLazyBufferCache
@@ -235,7 +234,7 @@ correct using things like function barriers, then this is a general technique th
 is sufficiently fast.
 """
 struct GeneralLazyBufferCache{F <: Function}
-    bufs::Dict # a dictionary mapping types to buffers
+    bufs::Dict{Any, Any} # a dictionary mapping types to buffers
     f::F
     GeneralLazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
