@@ -32,3 +32,14 @@ fnc = OptimizationFunction(negloglik, Optimization.AutoForwardDiff())
 prob = OptimizationProblem(fnc, θ₀, (yᵒ, n, ε), lb = [-10.0, 1e-6, 0.5],
     ub = [10.0, 10.0, 25.0])
 solve(prob, LBFGS())
+
+cache = LazyBufferCache()
+x = rand(1000)
+@inferred cache[x]
+@test 0 == @allocated cache[x]
+
+cache = GeneralLazyBufferCache(T -> Vector{T}(undef, 1000))
+# GeneralLazyBufferCache is documented not to infer.
+# @inferred cache[Float64]
+cache[Float64] # generate the buffer
+@test 0 == @allocated cache[Float64]
