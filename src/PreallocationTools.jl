@@ -204,7 +204,7 @@ same type and size `f(size(u))` (defaulting to the same size), which is allocate
 needed and then cached within `b` for subsequent usage.
 """
 struct LazyBufferCache{F <: Function}
-    bufs::Dict{Any, Any} # a dictionary mapping types to buffers
+    bufs::Dict{Any, Any} # a dictionary mapping (type, size) pairs to buffers
     sizemap::F
     LazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
