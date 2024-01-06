@@ -7,6 +7,8 @@ on:
       - 'release-'
     tags: '*'
   pull_request:
+  schedule:
+    - cron: '57 0 * * 5'
 
 jobs:
   build:
