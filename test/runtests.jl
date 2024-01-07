@@ -2,7 +2,6 @@ using Pkg
 using SafeTestsets
 
 const GROUP = get(ENV, "GROUP", "All")
-const is_APPVEYOR = Sys.iswindows() && haskey(ENV, "APPVEYOR")
 
 function activate_downstream_env()
     Pkg.activate("GPU")
@@ -11,32 +10,16 @@ function activate_downstream_env()
 end
 
 if GROUP == "All" || GROUP == "Core"
-    @safetestset "Quality Assurance" begin
-        include("qa.jl")
-    end
-    @safetestset "DiffCache Dispatch" begin
-        include("core_dispatch.jl")
-    end
-    @safetestset "DiffCache ODE tests" begin
-        include("core_odes.jl")
-    end
-    @safetestset "DiffCache Resizing" begin
-        include("core_resizing.jl")
-    end
-    @safetestset "DiffCache Nested Duals" begin
-        include("core_nesteddual.jl")
-    end
-    @safetestset "DiffCache Sparsity Support" begin
-        include("sparsity_support.jl")
-    end
-    @safetestset "GeneralLazyBufferCache" begin
-        include("general_lbc.jl")
-    end
+    @safetestset "Quality Assurance" include("qa.jl")
+    @safetestset "DiffCache Dispatch" include("core_dispatch.jl")
+    @safetestset "DiffCache ODE tests" include("core_odes.jl")
+    @safetestset "DiffCache Resizing" include("core_resizing.jl")
+    @safetestset "DiffCache Nested Duals" include("core_nesteddual.jl")
+    @safetestset "DiffCache Sparsity Support" include("sparsity_support.jl")
+    @safetestset "GeneralLazyBufferCache" include("general_lbc.jl")
 end
 
 if GROUP == "GPU"
     activate_downstream_env()
-    @safetestset "GPU tests" begin
-        include("gpu_all.jl")
-    end
+    @safetestset "GPU tests" include("gpu_all.jl")
 end
