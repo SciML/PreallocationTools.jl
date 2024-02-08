@@ -209,12 +209,18 @@ struct LazyBufferCache{F <: Function}
     LazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
 
+function similar_type(x::AbstractArray{T}, s::NTuple{N, Integer}) where {T, N}
+    # The compiler is smart enough to not allocate
+    # here for simple types like Array and SubArray
+    typeof(similar(x, ntuple(Returns(1), N)))
+end
+
 # override the [] method
 function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     s = b.sizemap(size(u)) # required buffer size
     get!(b.bufs, (T, s)) do
         similar(u, s) # buffer to allocate if it was not found in b.bufs
-    end::T  # declare type since b.bufs dictionary is untyped
+    end::similar_type(u, s) # declare type since b.bufs dictionary is untyped
 end
 
 # GeneralLazyBufferCache
