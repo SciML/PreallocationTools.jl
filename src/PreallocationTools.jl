@@ -9,7 +9,7 @@ struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
 end
 
 function FixedSizeDiffCache(u::AbstractArray{T}, siz,
-    ::Type{Val{chunk_size}}) where {T, chunk_size}
+        ::Type{Val{chunk_size}}) where {T, chunk_size}
     x = ArrayInterface.restructure(u,
         zeros(ForwardDiff.Dual{nothing, T, chunk_size},
             siz...))
@@ -25,8 +25,8 @@ and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 """
 function FixedSizeDiffCache(u::AbstractArray,
-    ::Type{Val{N}} = Val{ForwardDiff.pickchunksize(length(u))}) where {
-    N,
+        ::Type{Val{N}} = Val{ForwardDiff.pickchunksize(length(u))}) where {
+        N,
 }
     FixedSizeDiffCache(u, size(u), Val{N})
 end
@@ -75,7 +75,7 @@ function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     end
 end
 
-function get_tmp(dc::FixedSizeDiffCache, ::Type{T}) where T <: Number
+function get_tmp(dc::FixedSizeDiffCache, ::Type{T}) where {T <: Number}
     if promote_type(eltype(dc.du), T) <: eltype(dc.du)
         dc.du
     else
@@ -111,7 +111,7 @@ forward-mode automatic differentiation. Supports nested AD via keyword `levels`
 or specifying an array of chunk_sizes.
 """
 function DiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u));
-    levels::Int = 1)
+        levels::Int = 1)
     DiffCache(u, size(u), N * ones(Int, levels))
 end
 DiffCache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
@@ -164,7 +164,7 @@ function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
     end
 end
 
-function get_tmp(dc::DiffCache, ::Type{T}) where T <: Number
+function get_tmp(dc::DiffCache, ::Type{T}) where {T <: Number}
     if promote_type(eltype(dc.du), T) <: eltype(dc.du)
         dc.du
     else
