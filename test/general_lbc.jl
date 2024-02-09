@@ -37,6 +37,9 @@ cache = LazyBufferCache()
 x = rand(1000)
 @inferred cache[x]
 @test 0 == @allocated cache[x]
+y = view(x, 1:900)
+@inferred cache[y]
+@test 0 == @allocated cache[y]
 
 cache = GeneralLazyBufferCache(T -> Vector{T}(undef, 1000))
 # GeneralLazyBufferCache is documented not to infer.
