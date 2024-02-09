@@ -209,6 +209,7 @@ struct LazyBufferCache{F <: Function}
     LazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
 
+similar_type(x::AbstractArray, s::Integer) = similar_type(x, (s,))
 function similar_type(x::AbstractArray{T}, s::NTuple{N, Integer}) where {T, N}
     # The compiler is smart enough to not allocate
     # here for simple types like Array and SubArray
