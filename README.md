@@ -268,7 +268,7 @@ lbc = GeneralLazyBufferCache(function (p)
 end)
 ```
 
-then `lbc[p]` will be smart and reuse the caches. A full example looks like the following:
+then `lbc[p]` (or, equivalently, `get_tmp(lbc, p)`) will be smart and reuse the caches. A full example looks like the following:
 
 ```julia
 using Random, DifferentialEquations, LinearAlgebra, Optimization, OptimizationNLopt,
