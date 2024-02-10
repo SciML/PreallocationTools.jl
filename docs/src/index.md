@@ -267,7 +267,7 @@ then `lbc[p]` will be smart and reuse the caches. A full example looks like the 
 
 ```julia
 using Random, DifferentialEquations, LinearAlgebra, Optimization, OptimizationNLopt,
-    OptimizationOptimJL, PreallocationTools
+      OptimizationOptimJL, PreallocationTools
 
 lbc = GeneralLazyBufferCache(function (p)
     DifferentialEquations.init(ODEProblem(ode_fnc, y₀, (0.0, T), p), Tsit5(); saveat = t)
