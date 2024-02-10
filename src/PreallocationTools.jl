@@ -216,13 +216,15 @@ function similar_type(x::AbstractArray{T}, s::NTuple{N, Integer}) where {T, N}
     typeof(similar(x, ntuple(Returns(1), N)))
 end
 
-# override the [] method
-function Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray}
+function get_tmp(b::LazyBufferCache, u::T) where {T <: AbstractArray}
     s = b.sizemap(size(u)) # required buffer size
     get!(b.bufs, (T, s)) do
         similar(u, s) # buffer to allocate if it was not found in b.bufs
     end::similar_type(u, s) # declare type since b.bufs dictionary is untyped
 end
+
+# override the [] method
+Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray} = get_tmp(b, u)
 
 # GeneralLazyBufferCache
 
@@ -246,11 +248,12 @@ struct GeneralLazyBufferCache{F <: Function}
     GeneralLazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
 end
 
-function Base.getindex(b::GeneralLazyBufferCache, u::T) where {T}
+function get_tmp(b::GeneralLazyBufferCache, u::T) where {T}
     get!(b.bufs, T) do
         b.f(u)
     end
 end
+Base.getindex(b::GeneralLazyBufferCache, u::T) where {T} = get_tmp(b, u)
 
 export GeneralLazyBufferCache, FixedSizeDiffCache, DiffCache, LazyBufferCache, dualcache
 export get_tmp
