@@ -1,6 +1,6 @@
 using Random,
-    OrdinaryDiffEq, LinearAlgebra, Optimization, OptimizationOptimJL,
-    PreallocationTools
+      OrdinaryDiffEq, LinearAlgebra, Optimization, OptimizationOptimJL,
+      PreallocationTools
 
 lbc = GeneralLazyBufferCache(function (p)
     init(ODEProblem(ode_fnc, y₀,
@@ -40,6 +40,7 @@ x = rand(1000)
 y = view(x, 1:900)
 @inferred cache[y]
 @test 0 == @allocated cache[y]
+@test cache[y] === get_tmp(cache, y)
 
 cache_17 = LazyBufferCache(Returns(17))
 x = 1:10
@@ -52,3 +53,4 @@ cache = GeneralLazyBufferCache(T -> Vector{T}(undef, 1000))
 # @inferred cache[Float64]
 cache[Float64] # generate the buffer
 @test 0 == @allocated cache[Float64]
+@test get_tmp(cache, Float64) === cache[Float64]

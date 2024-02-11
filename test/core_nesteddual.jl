@@ -1,6 +1,6 @@
 using LinearAlgebra,
-    OrdinaryDiffEq, Test, PreallocationTools, ForwardDiff, Optimization,
-    OptimizationOptimJL
+      OrdinaryDiffEq, Test, PreallocationTools, ForwardDiff, Optimization,
+      OptimizationOptimJL
 
 randmat = rand(5, 3)
 sto = similar(randmat)
@@ -23,7 +23,8 @@ end
 In setting up the DiffCache, we are setting chunk_size to [1, 1], because we differentiate
 only with respect to τ. This initializes the cache with the minimum memory needed. =#
 stod = DiffCache(sto, [1, 1])
-df3 = ForwardDiff.derivative(τ -> ForwardDiff.derivative(ξ -> claytonsample!(stod, ξ, 0.0),
+df3 = ForwardDiff.derivative(
+    τ -> ForwardDiff.derivative(ξ -> claytonsample!(stod, ξ, 0.0),
         τ), 0.3)
 
 #= taking the second derivative of claytonsample! with respect to τ with auto-detected chunk-size.
@@ -32,7 +33,8 @@ than what's needed (1+1), the auto-allocated cache is big enough to handle the n
 if we don't specify the keyword argument levels = 2. This should in general not be relied on to work,
 especially if more levels of nesting occur (see optimization example below). =#
 stod = DiffCache(sto)
-df4 = ForwardDiff.derivative(τ -> ForwardDiff.derivative(ξ -> claytonsample!(stod, ξ, 0.0),
+df4 = ForwardDiff.derivative(
+    τ -> ForwardDiff.derivative(ξ -> claytonsample!(stod, ξ, 0.0),
         τ), 0.3)
 
 @test df3 ≈ df4
@@ -41,7 +43,8 @@ df4 = ForwardDiff.derivative(τ -> ForwardDiff.derivative(ξ -> claytonsample!(s
 For the given size of sto, ForwardDiff's heuristic chooses chunk_size = 8 and with keyword arg levels = 2,
 the created cache size is larger than what's needed (even more so than the last example). =#
 stod = DiffCache(sto, levels = 2)
-df5 = ForwardDiff.derivative(τ -> ForwardDiff.derivative(ξ -> claytonsample!(stod, ξ, 0.0),
+df5 = ForwardDiff.derivative(
+    τ -> ForwardDiff.derivative(ξ -> claytonsample!(stod, ξ, 0.0),
         τ), 0.3)
 
 @test df3 ≈ df5
