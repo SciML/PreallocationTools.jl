@@ -202,6 +202,9 @@ end
 A lazily allocated buffer object.  Given an array `u`, `b[u]` returns an array of the
 same type and size `f(size(u))` (defaulting to the same size), which is allocated as
 needed and then cached within `b` for subsequent usage.
+
+Optionally, the size can be explicitly given at calltime using `b[u,s]`, which will
+return a cache of size `s`.
 """
 struct LazyBufferCache{F <: Function}
     bufs::Dict{Any, Any} # a dictionary mapping (type, size) pairs to buffers
@@ -216,15 +219,18 @@ function similar_type(x::AbstractArray{T}, s::NTuple{N, Integer}) where {T, N}
     typeof(similar(x, ntuple(Returns(1), N)))
 end
 
-function get_tmp(b::LazyBufferCache, u::T) where {T <: AbstractArray}
-    s = b.sizemap(size(u)) # required buffer size
+function get_tmp(
+        b::LazyBufferCache, u::T, s = b.sizemap(size(u))) where {T <: AbstractArray}
     get!(b.bufs, (T, s)) do
         similar(u, s) # buffer to allocate if it was not found in b.bufs
     end::similar_type(u, s) # declare type since b.bufs dictionary is untyped
 end
 
 # override the [] method
-Base.getindex(b::LazyBufferCache, u::T) where {T <: AbstractArray} = get_tmp(b, u)
+function Base.getindex(
+        b::LazyBufferCache, u::T, s = b.sizemap(size(u))) where {T <: AbstractArray}
+    get_tmp(b, u, s)
+end
 
 # GeneralLazyBufferCache
 
