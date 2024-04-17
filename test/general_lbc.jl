@@ -42,11 +42,19 @@ y = view(x, 1:900)
 @test 0 == @allocated cache[y]
 @test cache[y] === get_tmp(cache, y)
 
+@inferred cache[x, 1111]
+@test 0 == @allocated cache[x, 1111]
+@test size(cache[x, 1111]) == (1111,)
+
 cache_17 = LazyBufferCache(Returns(17))
 x = 1:10
 @inferred cache_17[x]
 @test 0 == @allocated cache_17[x]
 @test size(cache_17[x]) == (17,)
+
+@inferred cache_17[x, 1111]
+@test 0 == @allocated cache_17[x, 1111]
+@test size(cache_17[x, 1111]) == (1111,)
 
 cache = GeneralLazyBufferCache(T -> Vector{T}(undef, 1000))
 # GeneralLazyBufferCache is documented not to infer.
