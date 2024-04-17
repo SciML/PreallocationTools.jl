@@ -219,14 +219,18 @@ function similar_type(x::AbstractArray{T}, s::NTuple{N, Integer}) where {T, N}
     typeof(similar(x, ntuple(Returns(1), N)))
 end
 
-function get_tmp(b::LazyBufferCache, u::T, s=b.sizemap(size(u))) where {T <: AbstractArray}
+function get_tmp(
+        b::LazyBufferCache, u::T, s = b.sizemap(size(u))) where {T <: AbstractArray}
     get!(b.bufs, (T, s)) do
         similar(u, s) # buffer to allocate if it was not found in b.bufs
     end::similar_type(u, s) # declare type since b.bufs dictionary is untyped
 end
 
 # override the [] method
-Base.getindex(b::LazyBufferCache, u::T, s=b.sizemap(size(u))) where {T <: AbstractArray} = get_tmp(b, u, s)
+function Base.getindex(
+        b::LazyBufferCache, u::T, s = b.sizemap(size(u))) where {T <: AbstractArray}
+    get_tmp(b, u, s)
+end
 
 # GeneralLazyBufferCache
 
