@@ -190,7 +190,7 @@ function enlargediffcache!(dc, nelem) #warning comes only once per DiffCache.
     chunksize = div(nelem, length(dc.du)) - 1
     @warn "The supplied DiffCache was too small and was enlarged. This incurs allocations
     on the first call to `get_tmp`. If few calls to `get_tmp` occur and optimal performance is essential,
-    consider changing 'N'/chunk size of this DiffCache to $chunksize."
+    consider changing 'N'/chunk size of this DiffCache to $chunksize." maxlog=1
     resize!(dc.dual_du, nelem)
 end
 
