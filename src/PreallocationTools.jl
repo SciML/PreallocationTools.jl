@@ -197,19 +197,27 @@ end
 # LazyBufferCache
 
 """
-    b = LazyBufferCache(f=identity)
+    b = LazyBufferCache(f = identity; initializer! = identity)
 
 A lazily allocated buffer object.  Given an array `u`, `b[u]` returns an array of the
 same type and size `f(size(u))` (defaulting to the same size), which is allocated as
 needed and then cached within `b` for subsequent usage.
 
+By default the created buffers are not initialized, but a function `initializer!`
+can be supplied which is applied to the buffer when it is created, for instance `buf -> fill!(buf, 0.0)`.
+
 Optionally, the size can be explicitly given at calltime using `b[u,s]`, which will
 return a cache of size `s`.
 """
-struct LazyBufferCache{F <: Function}
+struct LazyBufferCache{F <: Function, I <: Function}
     bufs::Dict{Any, Any} # a dictionary mapping (type, size) pairs to buffers
     sizemap::F
-    LazyBufferCache(f::F = identity) where {F <: Function} = new{F}(Dict(), f) # start with empty dict
+    initializer!::I
+    function LazyBufferCache(
+            f::F = identity; initializer!::I = identity) where {
+            F <: Function, I <: Function}
+        new{F, I}(Dict(), f, initializer!)
+    end # start with empty dict
 end
 
 similar_type(x::AbstractArray, s::Integer) = similar_type(x, (s,))
@@ -222,7 +230,9 @@ end
 function get_tmp(
         b::LazyBufferCache, u::T, s = b.sizemap(size(u))) where {T <: AbstractArray}
     get!(b.bufs, (T, s)) do
-        similar(u, s) # buffer to allocate if it was not found in b.bufs
+        buffer = similar(u, s) # buffer to allocate if it was not found in b.bufs
+        b.initializer!(buffer)
+        buffer
     end::similar_type(u, s) # declare type since b.bufs dictionary is untyped
 end
 
