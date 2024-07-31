@@ -208,6 +208,9 @@ A `LazyBufferCache` is a `Dict`-like type for the caches, which automatically de
 new cache arrays on demand when they are required. The function `f` maps
 `size_of_cache = f(size(u))`, which by default creates cache arrays of the same size.
 
+By default the created buffers are not initialized, but a function `initializer!`
+can be supplied which is applied to the buffer when it is created, for instance `buf -> fill!(buf, 0.0)`.
+
 Note that `LazyBufferCache` is type-stable and contains no dynamic dispatch. This gives
 it a ~15ns overhead. The upside of `LazyBufferCache` is that the user does not have to
 worry about potential issues with chunk sizes and such: `LazyBufferCache` is much easier!
