@@ -128,7 +128,7 @@ const dualcache = DiffCache
 
 Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`.
 """
-function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual{T2}}
+function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
     if isbitstype(T)
         nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
         if nelem > length(dc.dual_du)
