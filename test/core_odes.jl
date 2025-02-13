@@ -10,7 +10,7 @@ function foo(du, u, (A, tmp), t)
     nothing
 end
 #with defined chunk_size
-chunk_size = 5
+chunk_size = 9
 u0 = ones(5, 5)
 A = ones(5, 5)
 cache = DiffCache(zeros(5, 5), chunk_size)

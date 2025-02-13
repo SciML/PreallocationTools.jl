@@ -56,7 +56,7 @@ function foo(du, u, (A, tmp), t)
     nothing
 end
 #with specified chunk_size
-chunk_size = 10
+chunk_size = 9
 u0 = cu(rand(10, 10)) #example kept small for test purposes.
 A = cu(-randn(10, 10))
 cache = DiffCache(cu(zeros(10, 10)), chunk_size)
