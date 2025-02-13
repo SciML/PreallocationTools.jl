@@ -1,6 +1,6 @@
 using LinearAlgebra,
       OrdinaryDiffEq, Test, PreallocationTools, LabelledArrays,
-      RecursiveArrayTools
+      RecursiveArrayTools, ADTypes
 
 #Base array
 function foo(du, u, (A, tmp), t)
@@ -10,17 +10,17 @@ function foo(du, u, (A, tmp), t)
     nothing
 end
 #with defined chunk_size
-chunk_size = 5
+chunk_size = 9
 u0 = ones(5, 5)
 A = ones(5, 5)
 cache = DiffCache(zeros(5, 5), chunk_size)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0), (A, cache))
-sol = solve(prob, Rodas5P(chunk_size = chunk_size))
+sol = solve(prob, Rodas5P(autodiff = AutoForwardDiff(chunksize = chunk_size)))
 @test sol.retcode == ReturnCode.Success
 
 cache = FixedSizeDiffCache(zeros(5, 5), chunk_size)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0), (A, cache))
-sol = solve(prob, Rodas5P(chunk_size = chunk_size))
+sol = solve(prob, Rodas5P(autodiff = AutoForwardDiff(chunksize = chunk_size)))
 @test sol.retcode == ReturnCode.Success
 
 #with auto-detected chunk_size
@@ -60,7 +60,7 @@ end
 chunk_size = 4
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0),
     (A, DiffCache(c, chunk_size)))
-sol = solve(prob, Rodas5P(chunk_size = chunk_size))
+sol = solve(prob, Rodas5P(autodiff = AutoForwardDiff(chunksize = chunk_size)))
 @test sol.retcode == ReturnCode.Success
 #with auto-detected chunk_size
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0), (A, DiffCache(c)))

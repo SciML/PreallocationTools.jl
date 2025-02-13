@@ -90,11 +90,13 @@ newtonsol = solve(optprob, Newton())
 cache = DiffCache(zeros(ps, ps), [4, 4, 2])
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(ps, ps), (0.0, 1.0),
     (coeffs, cache))
-realsol = solve(prob, TRBDF2(chunk_size = 2), saveat = 0.0:0.1:10.0, reltol = 1e-8)
+realsol = solve(prob, TRBDF2(autodiff = AutoForwardDiff(chunksize = 2)),
+    saveat = 0.0:0.1:10.0, reltol = 1e-8)
 
 function objfun(x, prob, realsol, cache)
     prob = remake(prob, u0 = eltype(x).(prob.u0), p = (x, cache))
-    sol = solve(prob, TRBDF2(chunk_size = 2), saveat = 0.0:0.1:10.0, reltol = 1e-8)
+    sol = solve(prob, TRBDF2(autodiff = AutoForwardDiff(chunksize = 2)),
+        saveat = 0.0:0.1:10.0, reltol = 1e-8)
 
     ofv = 0.0
     if any((s.retcode != ReturnCode.Success for s in sol))

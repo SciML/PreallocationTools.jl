@@ -1,7 +1,7 @@
 name = "PreallocationTools"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "0.4.24"
+version = "0.4.25"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -10,31 +10,36 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 
 [weakdeps]
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
+SparseConnectivityTracer = "9f842d2f-2579-4b1d-911e-f412cf18a3f5"
 
 [extensions]
 PreallocationToolsReverseDiffExt = "ReverseDiff"
+PreallocationToolsSparseConnectivityTracerExt = "SparseConnectivityTracer"
 
 [compat]
-Adapt = "3.4, 4"
-Aqua = "0.8"
-ArrayInterface = "7.7"
-ForwardDiff = "0.10.19"
-LabelledArrays = "1.15"
-LinearAlgebra = "1"
-Optimization = "3.19"
-OptimizationOptimJL = "0.1.5"
-OrdinaryDiffEq = "6.65"
-Pkg = "1"
-Random = "1"
-RecursiveArrayTools = "3.2"
-ReverseDiff = "1"
+Adapt = "4.1.1"
+ADTypes = "1.13"
+Aqua = "0.8.11"
+ArrayInterface = "7.18.0"
+ForwardDiff = "0.10.38"
+LabelledArrays = "1.16.0"
+LinearAlgebra = "1.10"
+Optimization = "4.1.1"
+OptimizationOptimJL = "0.4.1"
+OrdinaryDiffEq = "6.91.0"
+Pkg = "1.10"
+Random = "1.10.8"
+RecursiveArrayTools = "3.29.0"
+ReverseDiff = "1.15.3"
 SafeTestsets = "0.1"
-SparseArrays = "1"
-Symbolics = "5.12"
-Test = "1"
+SparseArrays = "1.10"
+SparseConnectivityTracer = "0.6.12"
+Symbolics = "6.29.0"
+Test = "1.10"
 julia = "1.10"
 
 [extras]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -47,8 +52,9 @@ RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+SparseConnectivityTracer = "9f842d2f-2579-4b1d-911e-f412cf18a3f5"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Aqua", "Random", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SparseArrays", "Symbolics"]
+test = ["Aqua", "ADTypes", "Random", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SparseArrays", "Symbolics", "SparseConnectivityTracer"]
