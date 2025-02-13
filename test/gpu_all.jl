@@ -61,12 +61,12 @@ u0 = cu(rand(10, 10)) #example kept small for test purposes.
 A = cu(-randn(10, 10))
 cache = DiffCache(cu(zeros(10, 10)), chunk_size)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
-sol = solve(prob, TRBDF2(chunk_size = chunk_size))
+sol = solve(prob, TRBDF2(autodiff = AutoForwardDiff(chunksize = chunk_size)))
 @test sol.retcode == ReturnCode.Success
 
 cache = FixedSizeDiffCache(cu(zeros(10, 10)), chunk_size)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0f0, 1.0f0), (A, cache))
-sol = solve(prob, TRBDF2(chunk_size = chunk_size))
+sol = solve(prob, TRBDF2(autodiff = AutoForwardDiff(chunksize = chunk_size)))
 @test sol.retcode == ReturnCode.Success
 
 #with auto-detected chunk_size
