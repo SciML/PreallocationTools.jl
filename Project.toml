@@ -17,8 +17,8 @@ PreallocationToolsReverseDiffExt = "ReverseDiff"
 PreallocationToolsSparseConnectivityTracerExt = "SparseConnectivityTracer"
 
 [compat]
-Adapt = "3.4, 4"
-Aqua = "0.8"
+Adapt = "4.1.1"
+Aqua = "0.8.11"
 ArrayInterface = "7.18.0"
 ForwardDiff = "0.10.38"
 LabelledArrays = "1.16.0"
