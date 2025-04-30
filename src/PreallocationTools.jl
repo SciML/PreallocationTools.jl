@@ -11,7 +11,7 @@ end
 function FixedSizeDiffCache(u::AbstractArray{T}, siz,
         ::Type{Val{chunk_size}}) where {T, chunk_size}
     x = ArrayInterface.restructure(u,
-        zeros(ForwardDiff.Dual{nothing, T, chunk_size},
+        zeros(ForwardDiff.Dual{Nothing, T, chunk_size},
             siz...))
     xany = Any[]
     FixedSizeDiffCache(deepcopy(u), x, xany)
