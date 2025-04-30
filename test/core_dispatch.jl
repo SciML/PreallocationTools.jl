@@ -164,3 +164,12 @@ b = PreallocationTools.DiffCache(zeros(4), Val{4}())
 c = PreallocationTools.DiffCache(zeros(4), Val{4})
 @test structequal(a, b)
 @test structequal(a, b)
+
+
+# FixedSizeDiffCache get_tmp ReinterpretArray test
+# Ensures that get_tmp doesn't produce a Reinterpret array in some cases
+
+dual_cache = FixedSizeDiffCache([0.0, 0.0, 0.0], 3)
+dl = zeros(ForwardDiff.Dual{Nothing, Float64, 3}, 3)
+
+@test !(get_tmp(dual_cache, dl) isa Base.ReinterpretArray)
