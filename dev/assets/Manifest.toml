@@ -340,7 +340,7 @@ weakdeps = ["REPL"]
 deps = ["Adapt", "ArrayInterface", "ForwardDiff"]
 path = "/home/runner/work/PreallocationTools.jl/PreallocationTools.jl"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
-version = "0.4.27"
+version = "0.4.28"
 
     [deps.PreallocationTools.extensions]
     PreallocationToolsReverseDiffExt = "ReverseDiff"
