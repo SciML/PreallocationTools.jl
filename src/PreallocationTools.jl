@@ -107,8 +107,12 @@ end
 
 Builds a `DiffCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
-forward-mode automatic differentiation. Supports nested AD via keyword `levels`
-or specifying an array of chunk sizes.
+forward-mode automatic differentiation via
+[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
+Supports nested AD via keyword `levels` or specifying an array of chunk sizes.
+
+The `DiffCache` also supports sparsity detection via
+[SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
 """
 function DiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u));
         levels::Int = 1)

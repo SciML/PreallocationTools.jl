@@ -20,12 +20,20 @@ function that is being called.
 
 `DiffCache` is a type for doubly-preallocated vectors which are
 compatible with non-allocating forward-mode automatic differentiation by
-ForwardDiff.jl. Since ForwardDiff uses chunked duals in its forward pass, two
+[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
+Since ForwardDiff.jl uses chunked duals in its forward pass, two
 vector sizes are required in order for the arrays to be properly defined.
 `DiffCache` creates a dispatching type to solve this, so that by passing a
 qualifier it can automatically switch between the required cache. This method
 is fully type-stable and non-dynamic, made for when the highest performance is
 needed.
+
+The `DiffCache` also supports sparsity detection via
+[SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
+However, the implementation may allocate memory in this case since we assume that
+sparsity detection happens only once (or maybe a few times). Allocating memory
+allows to save memory in the long run since no additional cache needs to be stored
+forever.
 
 ### Using DiffCache
 
