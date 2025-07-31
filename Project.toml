@@ -18,9 +18,9 @@ PreallocationToolsSparseConnectivityTracerExt = "SparseConnectivityTracer"
 
 [compat]
 ADTypes = "1.13"
-Adapt = "4.1.1"
+Adapt = "4.3.0"
 Aqua = "0.8.11"
-ArrayInterface = "7.18.0"
+ArrayInterface = "7.19.0"
 ForwardDiff = "0.10.38, 1.0.1"
 LabelledArrays = "1.16.0"
 LinearAlgebra = "1.10"
