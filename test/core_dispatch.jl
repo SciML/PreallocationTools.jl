@@ -165,6 +165,7 @@ c = PreallocationTools.DiffCache(zeros(4), Val{4})
 @test structequal(a, b)
 @test structequal(a, b)
 
+
 # FixedSizeDiffCache get_tmp ReinterpretArray test
 # Ensures that get_tmp doesn't produce a Reinterpret array in some cases
 
