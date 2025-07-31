@@ -61,7 +61,7 @@ function foo(du, u, p, t)
 end
 
 ps = 2 #use to specify problem size; don't go crazy on this, because of the compilation time...
-coeffs = -collect(0.1:0.1:(ps^2 / 10))
+coeffs = -collect(0.1:0.1:(ps ^ 2 / 10))
 cache = DiffCache(zeros(ps, ps), levels = 3)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(ps, ps), (0.0, 1.0),
     (coeffs, cache))
