@@ -1,6 +1,7 @@
 module PreallocationTools
 
 using ForwardDiff, ArrayInterface, Adapt
+using PrecompileTools
 
 struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
@@ -289,5 +290,14 @@ Base.getindex(b::GeneralLazyBufferCache, u::T) where {T} = get_tmp(b, u)
 
 export GeneralLazyBufferCache, FixedSizeDiffCache, DiffCache, LazyBufferCache, dualcache
 export get_tmp
+
+@setup_workload begin
+    @compile_workload begin
+        # Basic precompilation
+        u = rand(10)
+        cache = DiffCache(u)
+        get_tmp(cache, u)
+    end
+end
 
 end
