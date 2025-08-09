@@ -5,19 +5,15 @@ using ForwardDiff
 using ArrayInterface
 using Adapt
 
-# Initialize on module load
-function __init__()
-    # Set the dual array creator function
-    PreallocationTools.DUAL_ARRAY_CREATOR[] = function(u::AbstractArray{T}, siz,
+function PreallocationTools.dualarraycreator(u::AbstractArray{T}, siz,
             ::Type{Val{chunk_size}}) where {T, chunk_size}
-        ArrayInterface.restructure(u,
-            zeros(ForwardDiff.Dual{Nothing, T, chunk_size},
-                siz...))
-    end
-    
-    # Set the chunk size function to use ForwardDiff's pickchunksize
-    PreallocationTools.CHUNK_SIZE_FUNC[] = ForwardDiff.pickchunksize
+    ArrayInterface.restructure(u,
+        zeros(ForwardDiff.Dual{Nothing, T, chunk_size},
+            siz...))
 end
+
+PreallocationTools.pickchunksize(x::Number) = ForwardDiff.pickchunksize(x)
+PreallocationTools.pickchunksize(x::AbstractArray) = ForwardDiff.pickchunksize(x)
 
 # Define chunksize for ForwardDiff.Dual types
 PreallocationTools.chunksize(::Type{ForwardDiff.Dual{T, V, N}}) where {T, V, N} = N
