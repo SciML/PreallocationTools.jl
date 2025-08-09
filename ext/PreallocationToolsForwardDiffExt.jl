@@ -12,8 +12,7 @@ function PreallocationTools.dualarraycreator(u::AbstractArray{T}, siz,
             siz...))
 end
 
-PreallocationTools.pickchunksize(x::Number) = ForwardDiff.pickchunksize(x)
-PreallocationTools.pickchunksize(x::AbstractArray) = ForwardDiff.pickchunksize(x)
+PreallocationTools.forwarddiff_compat_chunk_size(x::Int) = ForwardDiff.pickchunksize(x)
 
 # Define chunksize for ForwardDiff.Dual types
 PreallocationTools.chunksize(::Type{ForwardDiff.Dual{T, V, N}}) where {T, V, N} = N
