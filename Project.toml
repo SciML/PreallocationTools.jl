@@ -1,7 +1,7 @@
 name = "PreallocationTools"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "0.4.30"
+version = "0.4.31"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -23,7 +23,7 @@ ADTypes = "1.16"
 Adapt = "4.3.0"
 Aqua = "0.8.11"
 ArrayInterface = "7.19.0"
-ForwardDiff = "1.0.1"
+ForwardDiff = "0.10.38, 1.0.1"
 LabelledArrays = "1.16.0"
 LinearAlgebra = "1.10"
 Optimization = "4.1.1"
