@@ -19,7 +19,7 @@ function FixedSizeDiffCache(u::AbstractArray{T}, siz,
     FixedSizeDiffCache(deepcopy(u), x, xany)
 end
 
-forwarddiff_compat_chunk_size(n) = nothing
+forwarddiff_compat_chunk_size(n) = 0
 
 """
 `FixedSizeDiffCache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
