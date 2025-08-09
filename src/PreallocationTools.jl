@@ -14,7 +14,7 @@ dualarraycreator(args...) = nothing
 
 function FixedSizeDiffCache(u::AbstractArray{T}, siz,
         ::Type{Val{chunk_size}}) where {T, chunk_size}
-    dualarraycreator(u, siz, Val{chunk_size})
+   x = dualarraycreator(u, siz, Val{chunk_size})
     xany = Any[]
     FixedSizeDiffCache(deepcopy(u), x, xany)
 end
