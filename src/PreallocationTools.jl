@@ -10,19 +10,16 @@ struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
 end
 
 # Mutable container to hold dual array creator that can be updated by extension
-const DUAL_ARRAY_CREATOR = Ref{Union{Nothing,Function}}(nothing)
+dualarraycreator(args...) = nothing
 
 function FixedSizeDiffCache(u::AbstractArray{T}, siz,
         ::Type{Val{chunk_size}}) where {T, chunk_size}
-    # Try to use ForwardDiff if available, otherwise fallback
-    x = if !isnothing(DUAL_ARRAY_CREATOR[])
-        DUAL_ARRAY_CREATOR[](u, siz, Val{chunk_size})
-    else
-        similar(u, siz...)
-    end
+    dualarraycreator(u, siz, Val{chunk_size})
     xany = Any[]
     FixedSizeDiffCache(deepcopy(u), x, xany)
 end
+
+forwarddiff_compat_chunk_size(n) = nothing
 
 """
 `FixedSizeDiffCache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
@@ -31,16 +28,6 @@ Builds a `FixedSizeDiffCache` object that stores both a version of the cache for
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 """
-# Default chunk size calculation without ForwardDiff
-default_chunk_size(n) = min(n, 12)
-
-# Mutable container to hold chunk size function that can be updated by extension
-const CHUNK_SIZE_FUNC = Ref{Function}(default_chunk_size)
-
-function forwarddiff_compat_chunk_size(n)
-    CHUNK_SIZE_FUNC[](n)
-end
-
 function FixedSizeDiffCache(u::AbstractArray,
         ::Type{Val{N}} = Val{forwarddiff_compat_chunk_size(length(u))}) where {
         N,
