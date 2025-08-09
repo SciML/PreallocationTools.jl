@@ -1,6 +1,6 @@
 module PreallocationTools
 
-using ForwardDiff, ArrayInterface, Adapt
+using ArrayInterface, Adapt
 using PrecompileTools
 
 struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
@@ -9,14 +9,17 @@ struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     any_du::Vector{Any}
 end
 
+# Mutable container to hold dual array creator that can be updated by extension
+dualarraycreator(args...) = nothing
+
 function FixedSizeDiffCache(u::AbstractArray{T}, siz,
         ::Type{Val{chunk_size}}) where {T, chunk_size}
-    x = ArrayInterface.restructure(u,
-        zeros(ForwardDiff.Dual{Nothing, T, chunk_size},
-            siz...))
+   x = dualarraycreator(u, siz, Val{chunk_size})
     xany = Any[]
     FixedSizeDiffCache(deepcopy(u), x, xany)
 end
+
+forwarddiff_compat_chunk_size(n) = 0
 
 """
 `FixedSizeDiffCache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
@@ -26,7 +29,7 @@ and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 """
 function FixedSizeDiffCache(u::AbstractArray,
-        ::Type{Val{N}} = Val{ForwardDiff.pickchunksize(length(u))}) where {
+        ::Type{Val{N}} = Val{forwarddiff_compat_chunk_size(length(u))}) where {
         N,
 }
     FixedSizeDiffCache(u, size(u), Val{N})
@@ -36,34 +39,10 @@ function FixedSizeDiffCache(u::AbstractArray, N::Integer)
     FixedSizeDiffCache(u, size(u), Val{N})
 end
 
-chunksize(::Type{ForwardDiff.Dual{T, V, N}}) where {T, V, N} = N
+# Generic fallback for chunksize
+chunksize(::Type{T}) where {T} = 0
 
-function get_tmp(dc::FixedSizeDiffCache, u::T) where {T <: ForwardDiff.Dual}
-    x = reinterpret(T, dc.dual_du)
-    if chunksize(T) === chunksize(eltype(dc.dual_du))
-        x
-    else
-        @view x[axes(dc.du)...]
-    end
-end
-
-function get_tmp(dc::FixedSizeDiffCache, u::Type{T}) where {T <: ForwardDiff.Dual}
-    x = reinterpret(T, dc.dual_du)
-    if chunksize(T) === chunksize(eltype(dc.dual_du))
-        x
-    else
-        @view x[axes(dc.du)...]
-    end
-end
-
-function get_tmp(dc::FixedSizeDiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
-    x = reinterpret(T, dc.dual_du)
-    if chunksize(T) === chunksize(eltype(dc.dual_du))
-        x
-    else
-        @view x[axes(dc.du)...]
-    end
-end
+# ForwardDiff-specific methods moved to extension
 
 function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
@@ -103,19 +82,19 @@ function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
 end
 
 """
-`DiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u)); levels::Int = 1)`
+`DiffCache(u::AbstractArray, N::Int = forwarddiff_compat_chunk_size(length(u)); levels::Int = 1)`
 `DiffCache(u::AbstractArray; N::AbstractArray{<:Int})`
 
 Builds a `DiffCache` object that stores both a version of the cache for `u`
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation via
-[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
+[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl) (when available).
 Supports nested AD via keyword `levels` or specifying an array of chunk sizes.
 
 The `DiffCache` also supports sparsity detection via
 [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
 """
-function DiffCache(u::AbstractArray, N::Int = ForwardDiff.pickchunksize(length(u));
+function DiffCache(u::AbstractArray, N::Int = forwarddiff_compat_chunk_size(length(u));
         levels::Int = 1)
     DiffCache(u, size(u), N * ones(Int, levels))
 end
@@ -133,41 +112,7 @@ const dualcache = DiffCache
 
 Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`.
 """
-function get_tmp(dc::DiffCache, u::T) where {T <: ForwardDiff.Dual}
-    if isbitstype(T)
-        nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
-        if nelem > length(dc.dual_du)
-            enlargediffcache!(dc, nelem)
-        end
-        _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
-    else
-        _restructure(dc.du, zeros(T, size(dc.du)))
-    end
-end
-
-function get_tmp(dc::DiffCache, ::Type{T}) where {T <: ForwardDiff.Dual}
-    if isbitstype(T)
-        nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
-        if nelem > length(dc.dual_du)
-            enlargediffcache!(dc, nelem)
-        end
-        _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
-    else
-        _restructure(dc.du, zeros(T, size(dc.du)))
-    end
-end
-
-function get_tmp(dc::DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
-    if isbitstype(T)
-        nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
-        if nelem > length(dc.dual_du)
-            enlargediffcache!(dc, nelem)
-        end
-        _restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
-    else
-        _restructure(dc.du, zeros(T, size(dc.du)))
-    end
-end
+# ForwardDiff-specific methods moved to extension
 
 function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
@@ -290,6 +235,9 @@ Base.getindex(b::GeneralLazyBufferCache, u::T) where {T} = get_tmp(b, u)
 
 export GeneralLazyBufferCache, FixedSizeDiffCache, DiffCache, LazyBufferCache, dualcache
 export get_tmp
+
+# Export internal functions for extension use (but not public API)
+# These are needed by the ForwardDiff extension
 
 @setup_workload begin
     @compile_workload begin
