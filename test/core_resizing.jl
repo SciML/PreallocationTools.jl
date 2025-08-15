@@ -52,3 +52,45 @@ _du = DiffCache(du)
 f = A -> loss(_du, u, A, 0.0)
 analyticalsolution = [3.0 0; 0 0]
 @test ForwardDiff.gradient(f, A) ≈ analyticalsolution
+
+# Test resize! functionality for DiffCache
+@testset "resize! for DiffCache" begin
+    u = rand(10)
+    dc = DiffCache(u)
+
+    # Initial size
+    @test length(dc.du) == 10
+    @test length(dc.any_du) == 0  # Initially empty
+
+    # Resize to larger
+    resize!(dc, 20)
+    @test length(dc.du) == 20
+
+    # Resize to smaller
+    resize!(dc, 5)
+    @test length(dc.du) == 5
+
+    # Test that it returns the cache itself
+    @test resize!(dc, 8) === dc
+end
+
+# Test resize! functionality for FixedSizeDiffCache
+@testset "resize! for FixedSizeDiffCache" begin
+    u = rand(10)
+    dc = FixedSizeDiffCache(u)
+
+    # Initial size
+    @test length(dc.du) == 10
+    @test length(dc.any_du) == 0  # Initially empty
+
+    # Resize to larger
+    resize!(dc, 20)
+    @test length(dc.du) == 20
+
+    # Resize to smaller
+    resize!(dc, 5)
+    @test length(dc.du) == 5
+
+    # Test that it returns the cache itself
+    @test resize!(dc, 8) === dc
+end
