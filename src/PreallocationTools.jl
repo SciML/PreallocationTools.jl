@@ -14,7 +14,7 @@ dualarraycreator(args...) = nothing
 
 function FixedSizeDiffCache(u::AbstractArray{T}, siz,
         ::Type{Val{chunk_size}}) where {T, chunk_size}
-   x = dualarraycreator(u, siz, Val{chunk_size})
+    x = dualarraycreator(u, siz, Val{chunk_size})
     xany = Any[]
     FixedSizeDiffCache(deepcopy(u), x, xany)
 end
@@ -232,6 +232,44 @@ function get_tmp(b::GeneralLazyBufferCache, u::T) where {T}
     end
 end
 Base.getindex(b::GeneralLazyBufferCache, u::T) where {T} = get_tmp(b, u)
+
+# resize! methods for PreallocationTools types
+# Note: resize! only works for 1D arrays (vectors)
+function Base.resize!(dc::DiffCache, n::Integer)
+    # Only resize if the array is a vector
+    if dc.du isa AbstractVector
+        resize!(dc.du, n)
+    else
+        throw(ArgumentError("resize! is only supported for DiffCache with vector arrays, got $(typeof(dc.du))"))
+    end
+    # dual_du is often pre-allocated for ForwardDiff dual numbers, 
+    # and may need special handling based on chunk size
+    # Only resize if it's a vector
+    if dc.dual_du isa AbstractVector
+        resize!(dc.dual_du, n)
+    end
+    # Always resize the any_du cache
+    resize!(dc.any_du, n)
+    return dc
+end
+
+function Base.resize!(dc::FixedSizeDiffCache, n::Integer)
+    # Only resize if the array is a vector
+    if dc.du isa AbstractVector
+        resize!(dc.du, n)
+    else
+        throw(ArgumentError("resize! is only supported for FixedSizeDiffCache with vector arrays, got $(typeof(dc.du))"))
+    end
+    # dual_du is often pre-allocated for ForwardDiff dual numbers,
+    # and may need special handling based on chunk size
+    # Only resize if it's a vector
+    if dc.dual_du isa AbstractVector
+        resize!(dc.dual_du, n)
+    end
+    # Always resize the any_du cache
+    resize!(dc.any_du, n)
+    return dc
+end
 
 export GeneralLazyBufferCache, FixedSizeDiffCache, DiffCache, LazyBufferCache, dualcache
 export get_tmp
