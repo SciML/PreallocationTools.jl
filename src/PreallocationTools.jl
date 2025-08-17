@@ -44,6 +44,18 @@ chunksize(::Type{T}) where {T} = 0
 
 # ForwardDiff-specific methods moved to extension
 
+"""
+    get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
+
+Returns the appropriate cache array from the `FixedSizeDiffCache` based on the type of `u`.
+
+If `u` is a regular array or number, returns the standard cache `dc.du`. If `u` contains
+dual numbers (e.g., from ForwardDiff.jl), returns the dual cache array. The function
+automatically handles type promotion and resizing of internal caches as needed.
+
+This function enables seamless switching between regular and automatic differentiation
+computations without manual cache management.
+"""
 function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
         dc.du
@@ -148,6 +160,25 @@ function _restructure(normal_cache::AbstractArray, duals)
     ArrayInterface.restructure(normal_cache, duals)
 end
 
+"""
+    enlargediffcache!(dc::DiffCache, nelem::Integer)
+
+Enlarges the dual cache array in a `DiffCache` when it's found to be too small.
+
+This function is called internally when automatic differentiation requires a larger
+dual cache than initially allocated. It resizes `dc.dual_du` to accommodate `nelem`
+elements and issues a one-time warning suggesting an appropriate chunk size for
+optimal performance.
+
+## Arguments
+  - `dc`: The `DiffCache` object to enlarge
+  - `nelem`: The new required number of elements
+
+## Notes
+The warning is shown only once per `DiffCache` instance to avoid spam. For optimal
+performance in production code, pre-allocate with the suggested chunk size to avoid
+runtime allocations.
+"""
 function enlargediffcache!(dc, nelem) #warning comes only once per DiffCache.
     chunksize = div(nelem, length(dc.du)) - 1
     @warn "The supplied DiffCache was too small and was enlarged. This incurs allocations
