@@ -302,6 +302,50 @@ function Base.resize!(dc::FixedSizeDiffCache, n::Integer)
     return dc
 end
 
+# zero dispatches for PreallocationTools types
+function Base.zero(dc::DiffCache)
+    DiffCache(zero(dc.du), zero(dc.dual_du), Any[])
+end
+
+function Base.zero(dc::FixedSizeDiffCache)
+    FixedSizeDiffCache(zero(dc.du), zero(dc.dual_du), Any[])
+end
+
+function Base.zero(lbc::LazyBufferCache)
+    LazyBufferCache(lbc.sizemap; initializer! = lbc.initializer!)
+end
+
+function Base.zero(glbc::GeneralLazyBufferCache)
+    GeneralLazyBufferCache(glbc.f)
+end
+
+# copy dispatches for PreallocationTools types
+function Base.copy(dc::DiffCache)
+    DiffCache(copy(dc.du), copy(dc.dual_du), copy(dc.any_du))
+end
+
+function Base.copy(dc::FixedSizeDiffCache)
+    FixedSizeDiffCache(copy(dc.du), copy(dc.dual_du), copy(dc.any_du))
+end
+
+function Base.copy(lbc::LazyBufferCache)
+    new_lbc = LazyBufferCache(lbc.sizemap; initializer! = lbc.initializer!)
+    # Copy the internal buffer dictionary
+    for (key, val) in lbc.bufs
+        new_lbc.bufs[key] = copy(val)
+    end
+    new_lbc
+end
+
+function Base.copy(glbc::GeneralLazyBufferCache)
+    new_glbc = GeneralLazyBufferCache(glbc.f)
+    # Copy the internal buffer dictionary
+    for (key, val) in glbc.bufs
+        new_glbc.bufs[key] = copy(val)
+    end
+    new_glbc
+end
+
 export GeneralLazyBufferCache, FixedSizeDiffCache, DiffCache, LazyBufferCache, dualcache
 export get_tmp
 
