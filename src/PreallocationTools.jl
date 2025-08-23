@@ -57,14 +57,7 @@ This function enables seamless switching between regular and automatic different
 computations without manual cache management.
 """
 function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
-    if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
-        dc.du
-    else
-        if length(dc.du) > length(dc.any_du)
-            resize!(dc.any_du, length(dc.du))
-        end
-        _restructure(dc.du, dc.any_du)
-    end
+    get_tmp(dc, eltype(u))
 end
 
 function get_tmp(dc::FixedSizeDiffCache, ::Type{T}) where {T <: Number}
@@ -171,10 +164,12 @@ elements and issues a one-time warning suggesting an appropriate chunk size for
 optimal performance.
 
 ## Arguments
+
   - `dc`: The `DiffCache` object to enlarge
   - `nelem`: The new required number of elements
 
 ## Notes
+
 The warning is shown only once per `DiffCache` instance to avoid spam. For optimal
 performance in production code, pre-allocate with the suggested chunk size to avoid
 runtime allocations.
@@ -273,7 +268,7 @@ function Base.resize!(dc::DiffCache, n::Integer)
     else
         throw(ArgumentError("resize! is only supported for DiffCache with vector arrays, got $(typeof(dc.du))"))
     end
-    # dual_du is often pre-allocated for ForwardDiff dual numbers, 
+    # dual_du is often pre-allocated for ForwardDiff dual numbers,
     # and may need special handling based on chunk size
     # Only resize if it's a vector
     if dc.dual_du isa AbstractVector
