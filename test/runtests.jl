@@ -17,6 +17,7 @@ if GROUP == "All" || GROUP == "Core"
     @safetestset "DiffCache Nested Duals" include("core_nesteddual.jl")
     @safetestset "DiffCache Sparsity Support" include("sparsity_support.jl")
     @safetestset "DiffCache with SparseConnectivityTracer" include("sparse_connectivity_tracer.jl")
+    @safetestset "DiffCache with Enzyme" include("enzyme.jl")
     @safetestset "LazyBufferCache" include("lbc.jl")
     @safetestset "GeneralLazyBufferCache" include("general_lbc.jl")
     @safetestset "Zero and Copy Dispatches" include("test_zero_copy.jl")
