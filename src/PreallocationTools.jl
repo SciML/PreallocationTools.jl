@@ -341,6 +341,61 @@ function Base.copy(glbc::GeneralLazyBufferCache)
     new_glbc
 end
 
+# fill! dispatches for PreallocationTools types
+"""
+    fill!(dc::DiffCache, val)
+
+Fill all allocated buffers in the DiffCache with the given value.
+"""
+function Base.fill!(dc::DiffCache, val)
+    fill!(dc.du, val)
+    fill!(dc.dual_du, val)
+    fill!(dc.any_du, nothing)
+    return dc
+end
+
+"""
+    fill!(dc::FixedSizeDiffCache, val)
+
+Fill all allocated buffers in the FixedSizeDiffCache with the given value.
+"""
+function Base.fill!(dc::FixedSizeDiffCache, val)
+    fill!(dc.du, val)
+    fill!(dc.dual_du, val)
+    fill!(dc.any_du, nothing)
+    return dc
+end
+
+"""
+    fill!(lbc::LazyBufferCache, val)
+
+Fill all allocated buffers in the LazyBufferCache with the given value.
+"""
+function Base.fill!(lbc::LazyBufferCache, val)
+    for (_, buffer) in lbc.bufs
+        if buffer isa AbstractArray
+            fill!(buffer, val)
+        end
+    end
+    return lbc
+end
+
+"""
+    fill!(glbc::GeneralLazyBufferCache, val)
+
+Fill all allocated buffers in the GeneralLazyBufferCache with the given value.
+"""
+function Base.fill!(glbc::GeneralLazyBufferCache, val)
+    for (_, buffer) in glbc.bufs
+        if buffer isa AbstractArray
+            fill!(buffer, val)
+        elseif applicable(fill!, buffer, val)
+            fill!(buffer, val)
+        end
+    end
+    return glbc
+end
+
 export GeneralLazyBufferCache, FixedSizeDiffCache, DiffCache, LazyBufferCache, dualcache
 export get_tmp
 
