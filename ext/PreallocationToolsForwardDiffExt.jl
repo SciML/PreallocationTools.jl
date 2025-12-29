@@ -4,6 +4,7 @@ using PreallocationTools
 using ForwardDiff
 using ArrayInterface
 using Adapt
+using PrecompileTools
 
 function PreallocationTools.dualarraycreator(u::AbstractArray{T}, siz,
             ::Type{Val{chunk_size}}) where {T, chunk_size}
@@ -78,6 +79,23 @@ function PreallocationTools.get_tmp(dc::PreallocationTools.DiffCache, u::Abstrac
         PreallocationTools._restructure(dc.du, reinterpret(T, view(dc.dual_du, 1:nelem)))
     else
         PreallocationTools._restructure(dc.du, zeros(T, size(dc.du)))
+    end
+end
+
+@setup_workload begin
+    @compile_workload begin
+        # Precompile ForwardDiff-specific code paths
+        u = rand(10)
+
+        # DiffCache with Dual numbers
+        cache = PreallocationTools.DiffCache(u)
+        dual_u = ForwardDiff.Dual.(1:10, 1.0)
+        PreallocationTools.get_tmp(cache, dual_u)
+
+        # FixedSizeDiffCache creation and usage with Dual
+        fcache = PreallocationTools.FixedSizeDiffCache(u)
+        PreallocationTools.get_tmp(fcache, u)
+        PreallocationTools.get_tmp(fcache, dual_u)
     end
 end
 
