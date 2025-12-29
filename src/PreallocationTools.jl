@@ -404,10 +404,23 @@ export get_tmp
 
 @setup_workload begin
     @compile_workload begin
-        # Basic precompilation
+        # Precompile DiffCache with vectors and matrices
         u = rand(10)
         cache = DiffCache(u)
         get_tmp(cache, u)
+
+        m = rand(3, 3)
+        cache_m = DiffCache(m)
+        get_tmp(cache_m, m)
+
+        # Precompile LazyBufferCache
+        lbc = LazyBufferCache()
+        get_tmp(lbc, u)
+        get_tmp(lbc, m)
+
+        # Precompile GeneralLazyBufferCache
+        glbc = GeneralLazyBufferCache()
+        get_tmp(glbc, u)
     end
 end
 
