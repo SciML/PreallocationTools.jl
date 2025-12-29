@@ -21,6 +21,7 @@ if GROUP == "All" || GROUP == "Core"
     @safetestset "LazyBufferCache" include("lbc.jl")
     @safetestset "GeneralLazyBufferCache" include("general_lbc.jl")
     @safetestset "Zero, Copy, and Fill Dispatches" include("test_zero_copy.jl")
+    @safetestset "Allocation Regression Tests" include("alloc_tests.jl")
 end
 
 if GROUP == "GPU"
