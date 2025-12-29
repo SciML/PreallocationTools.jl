@@ -1,7 +1,8 @@
 module PreallocationTools
 
-using ArrayInterface, Adapt
-using PrecompileTools
+using Adapt: Adapt, adapt
+using ArrayInterface: ArrayInterface
+using PrecompileTools: @compile_workload, @setup_workload
 
 struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T

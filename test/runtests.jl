@@ -11,6 +11,7 @@ end
 
 if GROUP == "All" || GROUP == "Core"
     @safetestset "Quality Assurance" include("qa.jl")
+    @safetestset "Explicit Imports" include("explicit_imports.jl")
     @safetestset "DiffCache Dispatch" include("core_dispatch.jl")
     @safetestset "DiffCache ODE tests" include("core_odes.jl")
     @safetestset "DiffCache Resizing" include("core_resizing.jl")
