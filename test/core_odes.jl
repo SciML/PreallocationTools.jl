@@ -1,13 +1,13 @@
 using LinearAlgebra,
-      OrdinaryDiffEq, Test, PreallocationTools, LabelledArrays,
-      RecursiveArrayTools, ADTypes
+    OrdinaryDiffEq, Test, PreallocationTools, LabelledArrays,
+    RecursiveArrayTools, ADTypes
 
 #Base array
 function foo(du, u, (A, tmp), t)
     tmp = get_tmp(tmp, promote_type(eltype(u), typeof(t)))
     mul!(tmp, A, u)
     @. du = u + tmp
-    nothing
+    return nothing
 end
 #with defined chunk_size
 chunk_size = 9
@@ -29,8 +29,10 @@ prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(5, 5), (0.0, 1.0), (
 sol = solve(prob, Rodas5P())
 @test sol.retcode == ReturnCode.Success
 
-prob = ODEProblem(foo, ones(5, 5), (0.0, 1.0),
-    (ones(5, 5), FixedSizeDiffCache(zeros(5, 5))))
+prob = ODEProblem(
+    foo, ones(5, 5), (0.0, 1.0),
+    (ones(5, 5), FixedSizeDiffCache(zeros(5, 5)))
+)
 sol = solve(prob, Rodas5P())
 @test sol.retcode == ReturnCode.Success
 
@@ -39,10 +41,12 @@ function foo(du, u, (A, lbc), t)
     tmp = lbc[u]
     mul!(tmp, A, u)
     @. du = u + tmp
-    nothing
+    return nothing
 end
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, ones(5, 5), (0.0, 1.0),
-    (ones(5, 5), LazyBufferCache()))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(
+    foo, ones(5, 5), (0.0, 1.0),
+    (ones(5, 5), LazyBufferCache())
+)
 sol = solve(prob, Rodas5P())
 @test sol.retcode == ReturnCode.Success
 
@@ -54,12 +58,14 @@ function foo(du, u, (A, tmp), t)
     tmp = get_tmp(tmp, u)
     mul!(tmp, A, u)
     @. du = u + tmp
-    nothing
+    return nothing
 end
 #with specified chunk_size
 chunk_size = 4
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(foo, u0, (0.0, 1.0),
-    (A, DiffCache(c, chunk_size)))
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(
+    foo, u0, (0.0, 1.0),
+    (A, DiffCache(c, chunk_size))
+)
 sol = solve(prob, Rodas5P(autodiff = AutoForwardDiff(chunksize = chunk_size)))
 @test sol.retcode == ReturnCode.Success
 #with auto-detected chunk_size

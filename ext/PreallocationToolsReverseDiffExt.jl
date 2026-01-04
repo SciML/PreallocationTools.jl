@@ -4,8 +4,10 @@ using PreallocationTools
 import ReverseDiff
 
 # PreallocationTools https://github.com/SciML/PreallocationTools.jl/issues/39
-function Base.getindex(b::PreallocationTools.LazyBufferCache,
-        u::ReverseDiff.TrackedArray, s = b.sizemap(size(u)))
+function Base.getindex(
+        b::PreallocationTools.LazyBufferCache,
+        u::ReverseDiff.TrackedArray, s = b.sizemap(size(u))
+    )
     T = ReverseDiff.TrackedArray
     buf = get!(b.bufs, (T, s)) do
         # declare type since b.bufs dictionary is untyped

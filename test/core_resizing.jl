@@ -34,7 +34,7 @@ df2 = ForwardDiff.jacobian(x -> claytonsample!(stod, x[1], x[2]), [0.3; 0.0]) #s
 #test for enlarging cache
 function rhs!(du, u, p, t)
     A = p
-    mul!(du, A, u)
+    return mul!(du, A, u)
 end
 
 function loss(du, u, p, t)
