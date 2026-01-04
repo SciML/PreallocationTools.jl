@@ -1,5 +1,5 @@
 using LinearAlgebra,
-      OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff, ADTypes
+    OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff, ADTypes
 
 # upstream
 OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = Any
@@ -7,10 +7,15 @@ OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = An
 #Dispatch tests
 chunk_size = 5
 u0_CU = cu(ones(5, 5))
-dual_CU = cu(zeros(
-    ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32,
-        chunk_size},
-    2, 2))
+dual_CU = cu(
+    zeros(
+        ForwardDiff.Dual{
+            ForwardDiff.Tag{typeof(something), Float32}, Float32,
+            chunk_size,
+        },
+        2, 2
+    )
+)
 dual_N = ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32, 5}(0)
 cache_CU = DiffCache(u0_CU, chunk_size)
 tmp_du_CUA = get_tmp(cache_CU, u0_CU)
@@ -18,7 +23,7 @@ tmp_dual_du_CUA = get_tmp(cache_CU, dual_CU)
 tmp_du_CUN = get_tmp(cache_CU, 0.0f0)
 tmp_dual_du_CUN = get_tmp(cache_CU, dual_N)
 @test SciMLBase.parameterless_type(typeof(cache_CU.dual_du)) ==
-      SciMLBase.parameterless_type(typeof(u0_CU)) #check that dual cache array is a GPU array for performance reasons.
+    SciMLBase.parameterless_type(typeof(u0_CU)) #check that dual cache array is a GPU array for performance reasons.
 @test size(tmp_du_CUA) == size(u0_CU)
 @test typeof(tmp_du_CUA) == typeof(u0_CU)
 @test eltype(tmp_du_CUA) == eltype(u0_CU)
@@ -34,10 +39,15 @@ tmp_dual_du_CUN = get_tmp(cache_CU, dual_N)
 
 chunk_size = 5
 u0_B = cu(ones(5, 5))
-dual_B = cu(zeros(
-    ForwardDiff.Dual{ForwardDiff.Tag{typeof(something), Float32}, Float32,
-        chunk_size},
-    2, 2))
+dual_B = cu(
+    zeros(
+        ForwardDiff.Dual{
+            ForwardDiff.Tag{typeof(something), Float32}, Float32,
+            chunk_size,
+        },
+        2, 2
+    )
+)
 cache_B = FixedSizeDiffCache(u0_B, chunk_size)
 tmp_du_BA = get_tmp(cache_B, u0_B)
 tmp_dual_du_BA = get_tmp(cache_B, dual_B)
@@ -53,7 +63,7 @@ function foo(du, u, (A, tmp), t)
     tmp = get_tmp(tmp, u)
     mul!(tmp, A, u)
     @. du = u + tmp
-    nothing
+    return nothing
 end
 #with specified chunk_size
 chunk_size = 9

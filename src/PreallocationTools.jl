@@ -13,11 +13,13 @@ end
 # Mutable container to hold dual array creator that can be updated by extension
 dualarraycreator(args...) = nothing
 
-function FixedSizeDiffCache(u::AbstractArray{T}, siz,
-        ::Type{Val{chunk_size}}) where {T, chunk_size}
+function FixedSizeDiffCache(
+        u::AbstractArray{T}, siz,
+        ::Type{Val{chunk_size}}
+    ) where {T, chunk_size}
     x = dualarraycreator(u, siz, Val{chunk_size})
     xany = Any[]
-    FixedSizeDiffCache(deepcopy(u), x, xany)
+    return FixedSizeDiffCache(deepcopy(u), x, xany)
 end
 
 forwarddiff_compat_chunk_size(n) = 0
@@ -29,15 +31,17 @@ Builds a `FixedSizeDiffCache` object that stores both a version of the cache for
 and for the `Dual` version of `u`, allowing use of pre-cached vectors with
 forward-mode automatic differentiation.
 """
-function FixedSizeDiffCache(u::AbstractArray,
-        ::Type{Val{N}} = Val{forwarddiff_compat_chunk_size(length(u))}) where {
+function FixedSizeDiffCache(
+        u::AbstractArray,
+        ::Type{Val{N}} = Val{forwarddiff_compat_chunk_size(length(u))}
+    ) where {
         N,
-}
-    FixedSizeDiffCache(u, size(u), Val{N})
+    }
+    return FixedSizeDiffCache(u, size(u), Val{N})
 end
 
 function FixedSizeDiffCache(u::AbstractArray, N::Integer)
-    FixedSizeDiffCache(u, size(u), Val{N})
+    return FixedSizeDiffCache(u, size(u), Val{N})
 end
 
 # Generic fallback for chunksize
@@ -58,11 +62,11 @@ This function enables seamless switching between regular and automatic different
 computations without manual cache management.
 """
 function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
-    get_tmp(dc, eltype(u))
+    return get_tmp(dc, eltype(u))
 end
 
 function get_tmp(dc::FixedSizeDiffCache, ::Type{T}) where {T <: Number}
-    if promote_type(eltype(dc.du), T) <: eltype(dc.du)
+    return if promote_type(eltype(dc.du), T) <: eltype(dc.du)
         dc.du
     else
         if length(dc.du) > length(dc.any_du)
@@ -81,10 +85,12 @@ struct DiffCache{T <: AbstractArray, S <: AbstractArray}
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes) where {T}
-    x = adapt(ArrayInterface.parameterless_type(u),
-        zeros(T, prod(chunk_sizes .+ 1) * prod(siz)))
+    x = adapt(
+        ArrayInterface.parameterless_type(u),
+        zeros(T, prod(chunk_sizes .+ 1) * prod(siz))
+    )
     xany = Any[]
-    DiffCache(u, x, xany)
+    return DiffCache(u, x, xany)
 end
 
 """
@@ -100,13 +106,15 @@ Supports nested AD via keyword `levels` or specifying an array of chunk sizes.
 The `DiffCache` also supports sparsity detection via
 [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
 """
-function DiffCache(u::AbstractArray, N::Int = forwarddiff_compat_chunk_size(length(u));
-        levels::Int = 1)
-    DiffCache(u, size(u), N * ones(Int, levels))
+function DiffCache(
+        u::AbstractArray, N::Int = forwarddiff_compat_chunk_size(length(u));
+        levels::Int = 1
+    )
+    return DiffCache(u, size(u), N * ones(Int, levels))
 end
 DiffCache(u::AbstractArray, N::AbstractArray{<:Int}) = DiffCache(u, size(u), N)
 function DiffCache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where {N}
-    DiffCache(u, N; levels)
+    return DiffCache(u, N; levels)
 end
 DiffCache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = DiffCache(u, N; levels)
 
@@ -121,7 +129,7 @@ Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`
 # ForwardDiff-specific methods moved to extension
 
 function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
-    if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
+    return if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
         dc.du
     else
         if length(dc.du) > length(dc.any_du)
@@ -133,7 +141,7 @@ function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
 end
 
 function get_tmp(dc::DiffCache, ::Type{T}) where {T <: Number}
-    if promote_type(eltype(dc.du), T) <: eltype(dc.du)
+    return if promote_type(eltype(dc.du), T) <: eltype(dc.du)
         dc.du
     else
         if length(dc.du) > length(dc.any_du)
@@ -147,11 +155,11 @@ end
 get_tmp(dc, u) = dc
 
 function _restructure(normal_cache::Array, duals)
-    reshape(duals, size(normal_cache)...)
+    return reshape(duals, size(normal_cache)...)
 end
 
 function _restructure(normal_cache::AbstractArray, duals)
-    ArrayInterface.restructure(normal_cache, duals)
+    return ArrayInterface.restructure(normal_cache, duals)
 end
 
 """
@@ -179,8 +187,8 @@ function enlargediffcache!(dc, nelem) #warning comes only once per DiffCache.
     chunksize = div(nelem, length(dc.du)) - 1
     @warn "The supplied DiffCache was too small and was enlarged. This incurs allocations
     on the first call to `get_tmp`. If few calls to `get_tmp` occur and optimal performance is essential,
-    consider changing 'N'/chunk size of this DiffCache to $chunksize." maxlog=1
-    resize!(dc.dual_du, nelem)
+    consider changing 'N'/chunk size of this DiffCache to $chunksize." maxlog = 1
+    return resize!(dc.dual_du, nelem)
 end
 
 # LazyBufferCache
@@ -203,9 +211,11 @@ struct LazyBufferCache{F <: Function, I <: Function}
     sizemap::F
     initializer!::I
     function LazyBufferCache(
-            f::F = identity; initializer!::I = identity) where {
-            F <: Function, I <: Function}
-        new{F, I}(Dict(), f, initializer!)
+            f::F = identity; initializer!::I = identity
+        ) where {
+            F <: Function, I <: Function,
+        }
+        return new{F, I}(Dict(), f, initializer!)
     end # start with empty dict
 end
 
@@ -213,12 +223,13 @@ similar_type(x::AbstractArray, s::Integer) = similar_type(x, (s,))
 function similar_type(x::AbstractArray{T}, s::NTuple{N, Integer}) where {T, N}
     # The compiler is smart enough to not allocate
     # here for simple types like Array and SubArray
-    typeof(similar(x, ntuple(Returns(1), N)))
+    return typeof(similar(x, ntuple(Returns(1), N)))
 end
 
 function get_tmp(
-        b::LazyBufferCache, u::T, s = b.sizemap(size(u))) where {T <: AbstractArray}
-    get!(b.bufs, (T, s)) do
+        b::LazyBufferCache, u::T, s = b.sizemap(size(u))
+    ) where {T <: AbstractArray}
+    return get!(b.bufs, (T, s)) do
         buffer = similar(u, s) # buffer to allocate if it was not found in b.bufs
         b.initializer!(buffer)
         buffer
@@ -227,8 +238,9 @@ end
 
 # override the [] method
 function Base.getindex(
-        b::LazyBufferCache, u::T, s = b.sizemap(size(u))) where {T <: AbstractArray}
-    get_tmp(b, u, s)
+        b::LazyBufferCache, u::T, s = b.sizemap(size(u))
+    ) where {T <: AbstractArray}
+    return get_tmp(b, u, s)
 end
 
 # GeneralLazyBufferCache
@@ -254,7 +266,7 @@ struct GeneralLazyBufferCache{F <: Function}
 end
 
 function get_tmp(b::GeneralLazyBufferCache, u::T) where {T}
-    get!(b.bufs, T) do
+    return get!(b.bufs, T) do
         b.f(u)
     end
 end
@@ -300,28 +312,28 @@ end
 
 # zero dispatches for PreallocationTools types
 function Base.zero(dc::DiffCache)
-    DiffCache(zero(dc.du), zero(dc.dual_du), Any[])
+    return DiffCache(zero(dc.du), zero(dc.dual_du), Any[])
 end
 
 function Base.zero(dc::FixedSizeDiffCache)
-    FixedSizeDiffCache(zero(dc.du), zero(dc.dual_du), Any[])
+    return FixedSizeDiffCache(zero(dc.du), zero(dc.dual_du), Any[])
 end
 
 function Base.zero(lbc::LazyBufferCache)
-    LazyBufferCache(lbc.sizemap; initializer! = lbc.initializer!)
+    return LazyBufferCache(lbc.sizemap; initializer! = lbc.initializer!)
 end
 
 function Base.zero(glbc::GeneralLazyBufferCache)
-    GeneralLazyBufferCache(glbc.f)
+    return GeneralLazyBufferCache(glbc.f)
 end
 
 # copy dispatches for PreallocationTools types
 function Base.copy(dc::DiffCache)
-    DiffCache(copy(dc.du), copy(dc.dual_du), copy(dc.any_du))
+    return DiffCache(copy(dc.du), copy(dc.dual_du), copy(dc.any_du))
 end
 
 function Base.copy(dc::FixedSizeDiffCache)
-    FixedSizeDiffCache(copy(dc.du), copy(dc.dual_du), copy(dc.any_du))
+    return FixedSizeDiffCache(copy(dc.du), copy(dc.dual_du), copy(dc.any_du))
 end
 
 function Base.copy(lbc::LazyBufferCache)
@@ -330,7 +342,7 @@ function Base.copy(lbc::LazyBufferCache)
     for (key, val) in lbc.bufs
         new_lbc.bufs[key] = copy(val)
     end
-    new_lbc
+    return new_lbc
 end
 
 function Base.copy(glbc::GeneralLazyBufferCache)
@@ -339,7 +351,7 @@ function Base.copy(glbc::GeneralLazyBufferCache)
     for (key, val) in glbc.bufs
         new_glbc.bufs[key] = copy(val)
     end
-    new_glbc
+    return new_glbc
 end
 
 # fill! dispatches for PreallocationTools types

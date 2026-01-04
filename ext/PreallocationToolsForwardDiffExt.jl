@@ -6,11 +6,17 @@ using ArrayInterface
 using Adapt
 using PrecompileTools
 
-function PreallocationTools.dualarraycreator(u::AbstractArray{T}, siz,
-            ::Type{Val{chunk_size}}) where {T, chunk_size}
-    ArrayInterface.restructure(u,
-        zeros(ForwardDiff.Dual{Nothing, T, chunk_size},
-            siz...))
+function PreallocationTools.dualarraycreator(
+        u::AbstractArray{T}, siz,
+        ::Type{Val{chunk_size}}
+    ) where {T, chunk_size}
+    return ArrayInterface.restructure(
+        u,
+        zeros(
+            ForwardDiff.Dual{Nothing, T, chunk_size},
+            siz...
+        )
+    )
 end
 
 PreallocationTools.forwarddiff_compat_chunk_size(x::Int) = ForwardDiff.pickchunksize(x)
@@ -21,7 +27,7 @@ PreallocationTools.chunksize(::Type{ForwardDiff.Dual{T, V, N}}) where {T, V, N} 
 # Define get_tmp methods for ForwardDiff.Dual types
 function PreallocationTools.get_tmp(dc::PreallocationTools.FixedSizeDiffCache, u::T) where {T <: ForwardDiff.Dual}
     x = reinterpret(T, dc.dual_du)
-    if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
+    return if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
         x
     else
         @view x[axes(dc.du)...]
@@ -30,7 +36,7 @@ end
 
 function PreallocationTools.get_tmp(dc::PreallocationTools.FixedSizeDiffCache, u::Type{T}) where {T <: ForwardDiff.Dual}
     x = reinterpret(T, dc.dual_du)
-    if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
+    return if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
         x
     else
         @view x[axes(dc.du)...]
@@ -39,7 +45,7 @@ end
 
 function PreallocationTools.get_tmp(dc::PreallocationTools.FixedSizeDiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
     x = reinterpret(T, dc.dual_du)
-    if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
+    return if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
         x
     else
         @view x[axes(dc.du)...]
@@ -47,7 +53,7 @@ function PreallocationTools.get_tmp(dc::PreallocationTools.FixedSizeDiffCache, u
 end
 
 function PreallocationTools.get_tmp(dc::PreallocationTools.DiffCache, u::T) where {T <: ForwardDiff.Dual}
-    if isbitstype(T)
+    return if isbitstype(T)
         nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
         if nelem > length(dc.dual_du)
             PreallocationTools.enlargediffcache!(dc, nelem)
@@ -59,7 +65,7 @@ function PreallocationTools.get_tmp(dc::PreallocationTools.DiffCache, u::T) wher
 end
 
 function PreallocationTools.get_tmp(dc::PreallocationTools.DiffCache, ::Type{T}) where {T <: ForwardDiff.Dual}
-    if isbitstype(T)
+    return if isbitstype(T)
         nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
         if nelem > length(dc.dual_du)
             PreallocationTools.enlargediffcache!(dc, nelem)
@@ -71,7 +77,7 @@ function PreallocationTools.get_tmp(dc::PreallocationTools.DiffCache, ::Type{T})
 end
 
 function PreallocationTools.get_tmp(dc::PreallocationTools.DiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
-    if isbitstype(T)
+    return if isbitstype(T)
         nelem = div(sizeof(T), sizeof(eltype(dc.dual_du))) * length(dc.du)
         if nelem > length(dc.dual_du)
             PreallocationTools.enlargediffcache!(dc, nelem)

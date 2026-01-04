@@ -12,14 +12,14 @@ function res1!(dae::GlobalDAE, u)
     f = get_tmp(dae.f, u)
     x = get_tmp(dae.x, u)
     @views f[1] = 2 * x[1] * x[1]
-    nothing
+    return nothing
 end
 
 function res2!(dae::GlobalDAE, u)
     f = get_tmp(dae.f, u)
     x = get_tmp(dae.x, u)
     @views f[2] = 2 * x[2] * x[2]
-    nothing
+    return nothing
 end
 
 # A dispatch function to set the guess from the solver, call the residual
@@ -31,7 +31,7 @@ function res_dae_cache!(dae, output, x0)
     res2!(dae, x0)
 
     output .= get_tmp(dae.f, x0)
-    nothing
+    return nothing
 end
 
 wrap_res_dae_cache! = (output, x0) -> res_dae_cache!(dae_cache, output, x0)
