@@ -91,7 +91,7 @@ end
 @setup_workload begin
     @compile_workload begin
         # Precompile ForwardDiff-specific code paths
-        u = rand(10)
+        u = ones(10)
 
         # DiffCache with Dual numbers
         cache = PreallocationTools.DiffCache(u)
