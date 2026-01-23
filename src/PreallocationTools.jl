@@ -418,11 +418,11 @@ export get_tmp
 @setup_workload begin
     @compile_workload begin
         # Precompile DiffCache with vectors and matrices
-        u = rand(10)
+        u = ones(10)
         cache = DiffCache(u)
         get_tmp(cache, u)
 
-        m = rand(3, 3)
+        m = ones(3, 3)
         cache_m = DiffCache(m)
         get_tmp(cache_m, m)
 
