@@ -154,6 +154,13 @@ end
 
 get_tmp(dc, u) = dc
 
+"""
+    _restructure(normal_cache::AbstractArray, duals)
+
+Internal function that reshapes a flat array of dual numbers to match the shape of the
+normal cache array. For standard `Array` types, uses `reshape`. For other `AbstractArray`
+types, delegates to `ArrayInterface.restructure` to handle custom array types properly.
+"""
 function _restructure(normal_cache::Array, duals)
     return reshape(duals, size(normal_cache)...)
 end
