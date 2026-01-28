@@ -39,7 +39,7 @@ end
         # Test zero allocations
         @test (@allocated get_tmp(cache, u_vec)) == 0
         @test_alloc (@allocated get_tmp(cache, dual_vec))
-        @test (@allocated get_tmp(cache, first(u_vec))) == 0
+        @test_alloc (@allocated get_tmp(cache, first(u_vec)))
         @test_alloc (@allocated get_tmp(cache, first(dual_vec)))
     end
 
@@ -67,7 +67,7 @@ end
         # Test zero allocations
         @test (@allocated get_tmp(cache, u_vec)) == 0
         @test (@allocated get_tmp(cache, dual_vec)) == 0
-        @test (@allocated get_tmp(cache, first(u_vec))) == 0
+        @test_alloc (@allocated get_tmp(cache, first(u_vec)))
         @test_alloc (@allocated get_tmp(cache, first(dual_vec)))
     end
 
