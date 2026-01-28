@@ -1,6 +1,6 @@
 name = "PreallocationTools"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
-version = "1.1.0"
+version = "1.1.1"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
 
 [deps]
