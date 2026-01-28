@@ -1,9 +1,22 @@
 # Allocation regression tests for PreallocationTools.jl
 # These tests ensure that key functions remain zero-allocation at runtime.
+# Note: On Julia 1.10, some type assertions cannot be constant-folded,
+# causing small allocations. These tests are marked as broken on 1.10.
 
 using Test
 using PreallocationTools
 using ForwardDiff
+
+# Helper macro for allocation tests that may fail on Julia 1.10
+macro test_alloc(expr)
+    return quote
+        if VERSION >= v"1.11"
+            @test $(esc(expr)) == 0
+        else
+            @test_broken $(esc(expr)) == 0
+        end
+    end
+end
 
 @testset "Zero Allocation Tests" begin
     # Setup test data
@@ -25,9 +38,9 @@ using ForwardDiff
 
         # Test zero allocations
         @test (@allocated get_tmp(cache, u_vec)) == 0
-        @test (@allocated get_tmp(cache, dual_vec)) == 0
-        @test (@allocated get_tmp(cache, first(u_vec))) == 0
-        @test (@allocated get_tmp(cache, first(dual_vec))) == 0
+        @test_alloc (@allocated get_tmp(cache, dual_vec))
+        @test_alloc (@allocated get_tmp(cache, first(u_vec)))
+        @test_alloc (@allocated get_tmp(cache, first(dual_vec)))
     end
 
     @testset "DiffCache - Matrix" begin
@@ -39,7 +52,7 @@ using ForwardDiff
 
         # Test zero allocations
         @test (@allocated get_tmp(cache, u_mat)) == 0
-        @test (@allocated get_tmp(cache, dual_mat)) == 0
+        @test_alloc (@allocated get_tmp(cache, dual_mat))
     end
 
     @testset "FixedSizeDiffCache - Vector" begin
@@ -54,8 +67,8 @@ using ForwardDiff
         # Test zero allocations
         @test (@allocated get_tmp(cache, u_vec)) == 0
         @test (@allocated get_tmp(cache, dual_vec)) == 0
-        @test (@allocated get_tmp(cache, first(u_vec))) == 0
-        @test (@allocated get_tmp(cache, first(dual_vec))) == 0
+        @test_alloc (@allocated get_tmp(cache, first(u_vec)))
+        @test_alloc (@allocated get_tmp(cache, first(dual_vec)))
     end
 
     @testset "FixedSizeDiffCache - Matrix" begin
@@ -78,12 +91,13 @@ using ForwardDiff
         get_tmp(lbc, u_mat)
 
         # Test zero allocations on subsequent calls
-        @test (@allocated get_tmp(lbc, u_vec)) == 0
-        @test (@allocated get_tmp(lbc, u_mat)) == 0
+        # On Julia 1.10, the _buffer_type type assertion cannot be constant-folded
+        @test_alloc (@allocated get_tmp(lbc, u_vec))
+        @test_alloc (@allocated get_tmp(lbc, u_mat))
 
         # Test with getindex syntax
-        @test (@allocated lbc[u_vec]) == 0
-        @test (@allocated lbc[u_mat]) == 0
+        @test_alloc (@allocated lbc[u_vec])
+        @test_alloc (@allocated lbc[u_mat])
     end
 
     @testset "LazyBufferCache with size mapping" begin
