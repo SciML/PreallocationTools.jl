@@ -9,7 +9,7 @@ using ForwardDiff
 
 # Helper macro for allocation tests that may fail on Julia 1.10
 macro test_alloc(expr)
-    quote
+    return quote
         if VERSION >= v"1.11"
             @test $(esc(expr)) == 0
         else
