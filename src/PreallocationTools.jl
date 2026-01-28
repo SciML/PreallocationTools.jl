@@ -228,7 +228,7 @@ end
 
 # Compute the type that `_make_buffer` would return for a given array and size.
 # When size matches the original, preserve the original type
-_buffer_type(x::AbstractArray, s) = s == size(x) ? typeof(x) : similar_type(x, s)
+_buffer_type(x::AbstractArray, s) = s == size(x) ? typeof(similar(x)) : similar_type(x, s)
 
 function get_tmp(
         b::LazyBufferCache, u::T, s = b.sizemap(size(u))
