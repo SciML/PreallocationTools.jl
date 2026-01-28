@@ -226,14 +226,21 @@ function similar_type(x::AbstractArray{T}, s::NTuple{N, Integer}) where {T, N}
     return typeof(similar(x, ntuple(Returns(1), N)))
 end
 
+# Compute the type that `_make_buffer` would return for a given array and size.
+# When size matches the original, preserve the original type
+_buffer_type(x::AbstractArray, s) = s == size(x) ? typeof(similar(x)) : similar_type(x, s)
+
 function get_tmp(
         b::LazyBufferCache, u::T, s = b.sizemap(size(u))
     ) where {T <: AbstractArray}
     return get!(b.bufs, (T, s)) do
-        buffer = similar(u, s) # buffer to allocate if it was not found in b.bufs
+        # Use similar(u) when size matches to preserve wrapper types like
+        # ComponentArrays. similar(u, s) can strip wrapper types since the
+        # dims-based dispatch may not preserve them.
+        buffer = s == size(u) ? similar(u) : similar(u, s)
         b.initializer!(buffer)
         buffer
-    end::similar_type(u, s) # declare type since b.bufs dictionary is untyped
+    end::_buffer_type(u, s) # declare type since b.bufs dictionary is untyped
 end
 
 # override the [] method
