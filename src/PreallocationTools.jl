@@ -118,8 +118,11 @@ function DiffCache(u::AbstractArray, ::Type{Val{N}}; levels::Int = 1) where {N}
 end
 DiffCache(u::AbstractArray, ::Val{N}; levels::Int = 1) where {N} = DiffCache(u, N; levels)
 
-# Legacy deprecate later
-const dualcache = DiffCache
+# Deprecated: use DiffCache instead
+function dualcache(args...; kwargs...)
+    Base.depwarn("`dualcache` is deprecated, use `DiffCache` instead.", :dualcache)
+    return DiffCache(args...; kwargs...)
+end
 
 """
 `get_tmp(dc::DiffCache, u)`

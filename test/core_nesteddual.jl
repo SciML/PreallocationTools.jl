@@ -108,7 +108,7 @@ realsol = solve(
     saveat = 0.0:0.1:10.0, reltol = 1.0e-8
 )
 
-function objfun(x, prob, realsol, cache)
+function objfun2(x, prob, realsol, cache)
     prob = remake(prob, u0 = eltype(x).(prob.u0), p = (x, cache))
     sol = solve(
         prob, TRBDF2(autodiff = AutoForwardDiff(chunksize = 2)),
@@ -123,8 +123,8 @@ function objfun(x, prob, realsol, cache)
     end
     return ofv
 end
-
-optfun = OptimizationFunction(fn, Optimization.AutoForwardDiff())
+fn2(x, p) = objfun2(x, p[1], p[2], p[3])
+optfun = OptimizationFunction(fn2, Optimization.AutoForwardDiff())
 optprob = OptimizationProblem(optfun, zeros(length(coeffs)), (prob, realsol, cache))
 newtonsol2 = solve(optprob, Newton())
 
