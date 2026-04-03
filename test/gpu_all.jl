@@ -1,9 +1,6 @@
 using LinearAlgebra,
     OrdinaryDiffEq, Test, PreallocationTools, CUDA, ForwardDiff, ADTypes
 
-# upstream
-OrdinaryDiffEq.DiffEqBase.anyeltypedual(x::FixedSizeDiffCache, counter = 0) = Any
-
 #Dispatch tests
 chunk_size = 5
 u0_CU = cu(ones(5, 5))
