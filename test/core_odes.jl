@@ -1,5 +1,5 @@
 using LinearAlgebra,
-    OrdinaryDiffEq, Test, PreallocationTools, LabelledArrays,
+    OrdinaryDiffEq, SciMLBase, Test, PreallocationTools, LabelledArrays,
     RecursiveArrayTools, ADTypes
 
 #Base array

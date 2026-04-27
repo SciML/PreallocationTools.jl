@@ -1,7 +1,11 @@
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+OrdinaryDiffEqSDIRK = "2d112036-d095-4a1e-ab9a-08536f3ecdbf"
 PreallocationTools = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 
 [compat]
 CUDA = "3.12, 4, 5"
+OrdinaryDiffEqSDIRK = "2"
 PreallocationTools = "0.4, 1"
+SciMLBase = "2, 3"

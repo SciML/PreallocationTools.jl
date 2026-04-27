@@ -1,6 +1,6 @@
 using LinearAlgebra,
-    OrdinaryDiffEq, Test, PreallocationTools, ForwardDiff, Optimization,
-    OptimizationOptimJL
+    OrdinaryDiffEq, OrdinaryDiffEqSDIRK, SciMLBase, Test, PreallocationTools, ForwardDiff,
+    Optimization, OptimizationOptimJL
 
 randmat = rand(5, 3)
 sto = similar(randmat)
@@ -83,7 +83,7 @@ function objfun(x, prob, realsol, cache)
     sol = solve(prob, TRBDF2(), saveat = 0.0:0.1:10.0, reltol = 1.0e-8)
 
     ofv = 0.0
-    if any((s.retcode != ReturnCode.Success for s in sol))
+    if sol.retcode != ReturnCode.Success
         ofv = 1.0e12
     else
         ofv = sum((sol .- realsol) .^ 2)
@@ -116,7 +116,7 @@ function objfun2(x, prob, realsol, cache)
     )
 
     ofv = 0.0
-    if any((s.retcode != ReturnCode.Success for s in sol))
+    if sol.retcode != ReturnCode.Success
         ofv = 1.0e12
     else
         ofv = sum((sol .- realsol) .^ 2)
