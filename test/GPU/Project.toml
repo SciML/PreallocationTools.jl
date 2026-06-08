@@ -5,7 +5,7 @@ PreallocationTools = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 
 [compat]
-CUDA = "3.12, 4, 5"
+CUDA = "3.12, 4, 5, 6.1"
 OrdinaryDiffEqSDIRK = "2"
 PreallocationTools = "0.4, 1"
 SciMLBase = "2, 3"
