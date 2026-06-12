@@ -16,9 +16,9 @@ version = "0.4.5"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "28e1637322d4019ed2577cbec9268fab9b7da117"
+git-tree-sha1 = "7715e5b2b186c4d9b664d299d2c9e48b9a778c88"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "4.6.0"
+version = "4.6.1"
 
     [deps.Adapt.extensions]
     AdaptSparseArraysExt = "SparseArrays"
@@ -276,7 +276,7 @@ weakdeps = ["REPL"]
 
 [[deps.PreallocationTools]]
 deps = ["Adapt", "ArrayInterface", "PrecompileTools"]
-path = "/home/chrisrackauckas/github-runners/arctic1-16/_work/PreallocationTools.jl/PreallocationTools.jl"
+path = "/home/runner/work/PreallocationTools.jl/PreallocationTools.jl"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 version = "1.2.0"
 
