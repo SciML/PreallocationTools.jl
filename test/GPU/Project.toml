@@ -2,10 +2,16 @@
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 OrdinaryDiffEqSDIRK = "2d112036-d095-4a1e-ab9a-08536f3ecdbf"
 PreallocationTools = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+SciMLTesting = "09d9d899-5365-40a9-917a-5f67fddea283"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 CUDA = "3.12, 4, 5, 6.1"
 OrdinaryDiffEqSDIRK = "2"
 PreallocationTools = "0.4, 1"
+SafeTestsets = "0.1, 1"
 SciMLBase = "2, 3"
+SciMLTesting = "1"
+Test = "1"

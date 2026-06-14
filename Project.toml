@@ -32,7 +32,7 @@ OptimizationOptimJL = "0.4.1"
 OrdinaryDiffEq = "6.98.0, 7"
 OrdinaryDiffEqSDIRK = "1.1.0, 2"
 SciMLBase = "2, 3"
-Pkg = "1.10"
+SciMLTesting = "1"
 PrecompileTools = "1.2.1"
 Random = "1.10.8"
 RecursiveArrayTools = "3.29.0, 4"
@@ -56,7 +56,7 @@ OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 OrdinaryDiffEqSDIRK = "2d112036-d095-4a1e-ab9a-08536f3ecdbf"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+SciMLTesting = "09d9d899-5365-40a9-917a-5f67fddea283"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
@@ -67,4 +67,4 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Aqua", "ADTypes", "ExplicitImports", "ForwardDiff", "Random", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "OrdinaryDiffEqSDIRK", "SciMLBase", "Test", "RecursiveArrayTools", "Pkg", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SparseArrays", "Symbolics", "SparseConnectivityTracer"]
+test = ["Aqua", "ADTypes", "ExplicitImports", "ForwardDiff", "Random", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "OrdinaryDiffEqSDIRK", "SciMLBase", "SciMLTesting", "Test", "RecursiveArrayTools", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SparseArrays", "Symbolics", "SparseConnectivityTracer"]
