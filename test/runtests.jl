@@ -3,8 +3,6 @@ using SciMLTesting
 
 run_tests(;
     core = () -> begin
-        @safetestset "Quality Assurance" include("qa.jl")
-        @safetestset "Explicit Imports" include("explicit_imports.jl")
         @safetestset "DiffCache Dispatch" include("core_dispatch.jl")
         @safetestset "DiffCache ODE tests" include("core_odes.jl")
         @safetestset "DiffCache Resizing" include("core_resizing.jl")
@@ -16,6 +14,10 @@ run_tests(;
         @safetestset "Zero, Copy, and Fill Dispatches" include("test_zero_copy.jl")
         @safetestset "Allocation Regression Tests" include("alloc_tests.jl")
     end,
+    qa = (;
+        env = joinpath(@__DIR__, "qa"),
+        body = joinpath(@__DIR__, "qa", "qa.jl")
+    ),
     groups = Dict(
         # GPU declares its own sub-env, so it runs ONLY for GROUP="GPU" and is
         # excluded from "All" (matches the original `if GROUP == "GPU"` dispatch).
