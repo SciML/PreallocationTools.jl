@@ -56,7 +56,7 @@ analyticalsolution = [3.0 0; 0 0]
 # Test resize! functionality for DiffCache
 @testset "resize! for DiffCache" begin
     u = rand(10)
-    dc = DiffCache(u)
+    dc = DiffCache(u, 2)
 
     # Initial size
     @test length(dc.du) == 10
@@ -65,13 +65,48 @@ analyticalsolution = [3.0 0; 0 0]
     # Resize to larger
     resize!(dc, 20)
     @test length(dc.du) == 20
+    @test length(dc.dual_du) == 20 * 3
 
     # Resize to smaller
     resize!(dc, 5)
     @test length(dc.du) == 5
+    @test length(dc.dual_du) == 5 * 3
 
     # Test that it returns the cache itself
     @test resize!(dc, 8) === dc
+end
+
+@testset "reshape vector-backed DiffCache" begin
+    dc = DiffCache(collect(1.0:10.0), 2)
+    cache = reshape(dc, 2, 5)
+
+    normal_tmp = get_tmp(cache, 1.0)
+    @test size(normal_tmp) == (2, 5)
+    @test vec(normal_tmp) == collect(1.0:10.0)
+
+    normal_tmp[2, 3] = 42.0
+    @test dc.du[6] == 42.0
+
+    dual = ForwardDiff.Dual{Nothing}(1.0, 1.0, 0.0)
+    dual_tmp = get_tmp(cache, dual)
+    @test size(dual_tmp) == (2, 5)
+    @test eltype(dual_tmp) <: ForwardDiff.Dual
+    dual_tmp[1] = ForwardDiff.Dual{Nothing}(2.0, 3.0, 4.0)
+    @test dc.dual_du[1:3] == [2.0, 3.0, 4.0]
+
+    resize!(dc, 12)
+    @test length(dc.dual_du) == 36
+
+    resized_cache = reshape(dc, (2, 6))
+    @test size(get_tmp(resized_cache, 1.0)) == (2, 6)
+    @test size(get_tmp(resized_cache, dual)) == (2, 6)
+
+    matrix_dc = DiffCache(zeros(2, 5), 2)
+    matrix_cache = reshape(matrix_dc, 5, 2)
+    matrix_dual_tmp = get_tmp(matrix_cache, dual)
+    @test size(matrix_dual_tmp) == (5, 2)
+    matrix_dual_tmp[1] = ForwardDiff.Dual{Nothing}(5.0, 6.0, 7.0)
+    @test matrix_dc.dual_du[1:3] == [5.0, 6.0, 7.0]
 end
 
 # Test warn_on_resize option

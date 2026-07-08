@@ -164,6 +164,28 @@ function get_tmp(dc::DiffCache, ::Type{T}) where {T <: Number}
     end
 end
 
+"""
+    reshape(dc::DiffCache, dims...)
+    reshape(dc::DiffCache, dims)
+
+Return a `DiffCache` whose normal cache has shape `dims`.
+
+This is useful for vector-backed caches that need to be resized. Resize the
+backing `DiffCache` with `resize!`, then call `reshape` again with the updated
+dimensions. The returned cache shares the normal cache storage with `dc`; the
+raw dual cache storage remains vector-backed so `get_tmp` can reinterpret it for
+the requested automatic differentiation element type.
+"""
+function Base.reshape(dc::DiffCache, dims::Tuple{Vararg{Integer}})
+    shape = map(Int, dims)
+    return DiffCache(_resizeable_reshape(dc.du, shape), dc.dual_du, dc.any_du, dc.warn_on_resize)
+end
+
+Base.reshape(dc::DiffCache, dims::Integer...) = reshape(dc, dims)
+
+_resizeable_reshape(a::AbstractVector, shape) = reshape(view(a, :), shape)
+_resizeable_reshape(a::AbstractArray, shape) = reshape(a, shape)
+
 get_tmp(dc, u) = dc
 
 """
@@ -178,7 +200,15 @@ function _restructure(normal_cache::Array, duals)
 end
 
 function _restructure(normal_cache::AbstractArray, duals)
+    if _has_vector_view_parent(normal_cache)
+        return reshape(duals, size(normal_cache)...)
+    end
     return ArrayInterface.restructure(normal_cache, duals)
+end
+
+function _has_vector_view_parent(a)
+    p = applicable(parent, a) ? parent(a) : nothing
+    return p isa SubArray{<:Any, 1, <:AbstractVector}
 end
 
 """
@@ -305,15 +335,13 @@ Base.getindex(b::GeneralLazyBufferCache, u::T) where {T} = get_tmp(b, u)
 function Base.resize!(dc::DiffCache, n::Integer)
     # Only resize if the array is a vector
     if dc.du isa AbstractVector
+        dual_length = length(dc.du) == 0 ? n : cld(length(dc.dual_du), length(dc.du)) * n
         resize!(dc.du, n)
     else
         throw(ArgumentError("resize! is only supported for DiffCache with vector arrays, got $(typeof(dc.du))"))
     end
-    # dual_du is often pre-allocated for ForwardDiff dual numbers,
-    # and may need special handling based on chunk size
-    # Only resize if it's a vector
     if dc.dual_du isa AbstractVector
-        resize!(dc.dual_du, n)
+        resize!(dc.dual_du, dual_length)
     end
     # Always resize the any_du cache
     resize!(dc.any_du, n)
