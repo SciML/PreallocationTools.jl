@@ -26,6 +26,13 @@ function structequal(struct1, struct2)
     end
 end
 
+struct IsbitsPair{T}
+    x::T
+    y::T
+end
+
+Base.zero(::Type{IsbitsPair{T}}) where {T} = IsbitsPair(zero(T), zero(T))
+
 #Setup Base Array tests
 chunk_size = 5
 u0 = ones(5, 5)
@@ -195,3 +202,33 @@ dual_cache = FixedSizeDiffCache([0.0, 0.0, 0.0], 3)
 dl = zeros(ForwardDiff.Dual{Nothing, Float64, 3}, 3)
 
 @test !(get_tmp(dual_cache, dl) isa Base.ReinterpretArray)
+
+@testset "DiffCache preserves isbits wrappers around duals" begin
+    z = zeros(ComplexF64, 20)
+    zd = DiffCache(z)
+
+    function sum_cis(θ)
+        ztmp = get_tmp(zd, θ)
+        @test eltype(ztmp) <: Complex
+        for i in eachindex(ztmp)
+            ztmp[i] = cis(i * θ)
+        end
+        abs(sum(ztmp))
+    end
+
+    @test ForwardDiff.derivative(sum_cis, 1.1) isa Float64
+
+    DualT = ForwardDiff.Dual{Nothing, Float64, 2}
+    pair_cache = DiffCache(zeros(IsbitsPair{Float64}, 3), 2)
+    pair_tmp = get_tmp(pair_cache, DualT)
+
+    @test size(pair_tmp) == (3,)
+    @test eltype(pair_tmp) == IsbitsPair{DualT}
+
+    pair_tmp[1] = IsbitsPair(zero(DualT), zero(DualT))
+    @test pair_tmp[1] == IsbitsPair(zero(DualT), zero(DualT))
+
+    complex32_cache = DiffCache(zeros(ComplexF32, 3), 5)
+    complex32_tmp = get_tmp(complex32_cache, DualT)
+    @test eltype(complex32_tmp) == Complex{DualT}
+end
