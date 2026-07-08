@@ -33,6 +33,22 @@ end
 
 Base.zero(::Type{IsbitsPair{T}}) where {T} = IsbitsPair(zero(T), zero(T))
 
+@testset "DiffCache accepts isbits elements without zero" begin
+    u = [(; a = 1.0, b = (2.0, 3.0)), (; a = 4.0, b = (5.0, 6.0))]
+    cache = DiffCache(u, 3)
+    DualT = ForwardDiff.Dual{Nothing, Float64, 3}
+    tmp = get_tmp(cache, DualT)
+    expected_eltype = NamedTuple{(:a, :b), Tuple{DualT, Tuple{DualT, DualT}}}
+
+    @test eltype(cache.dual_du) == eltype(u)
+    @test length(cache.dual_du) == 8
+    @test size(tmp) == size(u)
+    @test eltype(tmp) == expected_eltype
+
+    tmp[1] = (; a = zero(DualT), b = (zero(DualT), zero(DualT)))
+    @test tmp[1] == (; a = zero(DualT), b = (zero(DualT), zero(DualT)))
+end
+
 #Setup Base Array tests
 chunk_size = 5
 u0 = ones(5, 5)
