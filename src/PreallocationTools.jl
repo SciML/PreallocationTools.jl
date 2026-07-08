@@ -88,10 +88,14 @@ end
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes; warn_on_resize::Bool = true) where {T}
     x = adapt(
         ArrayInterface.parameterless_type(u),
-        zeros(T, prod(chunk_sizes .+ 1) * prod(siz))
+        _zeroed_or_uninitialized(T, prod(chunk_sizes .+ 1) * prod(siz))
     )
     xany = Any[]
     return DiffCache(u, x, xany, warn_on_resize)
+end
+
+function _zeroed_or_uninitialized(::Type{T}, dims...) where {T}
+    return hasmethod(zero, Tuple{Type{T}}) ? zeros(T, dims...) : Array{T}(undef, dims...)
 end
 
 """
