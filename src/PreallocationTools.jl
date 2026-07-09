@@ -207,6 +207,7 @@ function _restructure(normal_cache::AbstractArray, duals)
 end
 
 function _has_vector_view_parent(a)
+    a isa SubArray{<:Any, 1, <:AbstractVector} && return true
     p = applicable(parent, a) ? parent(a) : nothing
     return p isa SubArray{<:Any, 1, <:AbstractVector}
 end
