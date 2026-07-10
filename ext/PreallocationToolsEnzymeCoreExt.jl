@@ -34,7 +34,16 @@ const SupportedCache = Union{DiffCache, FixedSizeDiffCache, LazyBufferCache}
 # based (e.g. WeakKeyDict) would miss. The WeakRef guards against objectid
 # reuse after the original key is garbage collected; dead entries are purged
 # whenever a new cache is registered.
-const CONST_CACHE_SHADOWS = Dict{UInt, Tuple{WeakRef, Vector{Any}}}()
+# Forward-mode and reverse-mode rule applications use disjoint lane vectors.
+# Under nested differentiation, an outer pass applies these rules to the
+# `get_tmp` calls inside the (already-transformed) inner rule bodies, so the
+# same cache is resolved once per differentiation level; in mixed-mode nesting
+# (forward-over-reverse, reverse-over-forward) the levels use different rule
+# kinds, and separating the lanes by rule kind keeps the outer level's shadow
+# of the primal buffer from aliasing the inner level's shadow. Reverse-mode
+# shadows must persist across the augmented/reverse sweep boundary, so that
+# aliasing would corrupt derivatives.
+const CONST_CACHE_SHADOWS = Dict{UInt, Tuple{WeakRef, Vector{Any}, Vector{Any}}}()
 const CONST_CACHE_SHADOWS_LOCK = ReentrantLock()
 
 # Key on a mutable field that is shared by everything aliasing the same
@@ -64,19 +73,21 @@ end
 # compiles: rule bodies are processed by Enzyme's pipeline, which corrupts the
 # statically-visible Dict mutation (observed as broken lookups on the second
 # `get_tmp` of a differentiated call).
-constshadow(cache::SupportedCache, i::Int) = Base.invokelatest(_constshadow, cache, i)
+function constshadow(cache::SupportedCache, i::Int, rev::Bool)
+    return Base.invokelatest(_constshadow, cache, i, rev)
+end
 
-function _constshadow(cache::SupportedCache, i::Int)
+function _constshadow(cache::SupportedCache, i::Int, rev::Bool)
     key = shadowkey(cache)
     id = objectid(key)
     return lock(CONST_CACHE_SHADOWS_LOCK) do
         entry = get(CONST_CACHE_SHADOWS, id, nothing)
         if entry === nothing || entry[1].value !== key
             purgedeadshadows!()
-            entry = (WeakRef(key), Any[])
+            entry = (WeakRef(key), Any[], Any[])
             CONST_CACHE_SHADOWS[id] = entry
         end
-        lanes = entry[2]
+        lanes = rev ? entry[3] : entry[2]
         while length(lanes) < i
             push!(lanes, nothing)
         end
@@ -89,20 +100,22 @@ function _constshadow(cache::SupportedCache, i::Int)
     end
 end
 
-shadowcache(dc::Const, i::Int) = constshadow(dc.val, i)
-shadowcache(dc::Duplicated, i::Int) = ownshadow(dc.val, dc.dval, i)
-shadowcache(dc::BatchDuplicated, i::Int) = ownshadow(dc.val, dc.dval[i], i)
-shadowcache(dc::MixedDuplicated, i::Int) = ownshadow(dc.val, dc.dval[], i)
-shadowcache(dc::BatchMixedDuplicated, i::Int) = ownshadow(dc.val, dc.dval[i][], i)
+shadowcache(dc::Const, i::Int, rev::Bool) = constshadow(dc.val, i, rev)
+shadowcache(dc::Duplicated, i::Int, rev::Bool) = ownshadow(dc.val, dc.dval, i, rev)
+shadowcache(dc::BatchDuplicated, i::Int, rev::Bool) = ownshadow(dc.val, dc.dval[i], i, rev)
+shadowcache(dc::MixedDuplicated, i::Int, rev::Bool) = ownshadow(dc.val, dc.dval[], i, rev)
+function shadowcache(dc::BatchMixedDuplicated, i::Int, rev::Bool)
+    return ownshadow(dc.val, dc.dval[i][], i, rev)
+end
 
-ownshadow(cache, dcache, i::Int) = dcache
+ownshadow(cache, dcache, i::Int, rev::Bool) = dcache
 # For a duplicated LazyBufferCache the registry shadow is used instead of the
 # user-provided one: creating the shadow buffer would have to insert into a
 # Dict that Enzyme is tracking, and Dict mutation from inside a rule body
 # corrupts the tracked shadow Dict via Enzyme's store mirroring (UndefRefError
 # on Julia 1.10). Under the scratch-buffer contract the identity of the shadow
 # buffer is unobservable, so this is a pure implementation detail.
-ownshadow(cache::LazyBufferCache, dcache, i::Int) = constshadow(cache, i)
+ownshadow(cache::LazyBufferCache, dcache, i::Int, rev::Bool) = constshadow(cache, i, rev)
 
 # True when the rule supplies the shadow buffer from the persistent registry
 # (rather than from user-managed shadow memory).
@@ -140,7 +153,7 @@ function fwdrule(config, dc, args...)
     shadows = if EnzymeRules.runtime_activity(config) && runtimeinactive(dc)
         ntuple(Returns(du), Val(W))
     else
-        ntuple(i -> shadowtmp(shadowcache(dc, i), args...)::typeof(du), Val(W))
+        ntuple(i -> shadowtmp(shadowcache(dc, i, false), args...)::typeof(du), Val(W))
     end
     return if EnzymeRules.needs_primal(config)
         W == 1 ? Duplicated(du, shadows[1]) : BatchDuplicated(du, shadows)
@@ -173,7 +186,7 @@ function augrule(config, dc, args...)
             ntuple(Returns(du), Val(W))
         else
             ntuple(Val(W)) do i
-                sdu = shadowtmp(shadowcache(dc, i), args...)::typeof(du)
+                sdu = shadowtmp(shadowcache(dc, i, true), args...)::typeof(du)
                 # Registry-owned shadows may hold stale tangents from an
                 # earlier forward-mode differentiation. Adjoint accumulation
                 # only starts in the reverse sweep, after every augmented

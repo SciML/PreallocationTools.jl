@@ -154,28 +154,42 @@ end
     @test d2_enz ≈ d2_fd
 end
 
-@testset "Second order: forward-over-forward Enzyme" begin
+@testset "Second order: Enzyme over Enzyme" begin
     stod = DiffCache(similar(randmat))
     loss(τ, cache) = sum(abs2, claytonsample!(cache, τ, 0.0))
     d2_fd = ForwardDiff.derivative(
         τ -> ForwardDiff.derivative(σ -> loss(σ, stod), τ), 0.3
     )
 
-    dloss(τ, cache) = only(Enzyme.autodiff(Forward, loss, Duplicated(τ, 1.0), Const(cache)))
-    d2_enz = only(
+    dloss_f(τ, cache) = only(
+        Enzyme.autodiff(Forward, loss, Duplicated(τ, 1.0), Const(cache))
+    )
+    dloss_r(τ, cache) = Enzyme.autodiff(Reverse, loss, Active, Active(τ), Const(cache))[1][1]
+
+    # Forward over forward. Both nesting levels resolve a hidden shadow for
+    # the same cache; the tests below rely on the registry keeping the
+    # forward-rule and reverse-rule lanes disjoint so the levels never share
+    # a shadow buffer in mixed-mode nesting.
+    d2_ff = only(
         Enzyme.autodiff(
-            set_runtime_activity(Forward), Const(dloss), Duplicated(0.3, 1.0), Const(stod)
+            set_runtime_activity(Forward), Const(dloss_f), Duplicated(0.3, 1.0), Const(stod)
         )
     )
-    @test d2_enz ≈ d2_fd
+    @test d2_ff ≈ d2_fd
 
-    # NOT tested because it is NOT currently supported: mixed-mode nesting
-    # (forward-over-reverse, reverse-over-forward) of Enzyme over Enzyme with
-    # a shared cache silently produces wrong derivatives — both nesting levels
-    # fetch the same hidden shadow for the same cache, and no runtime signal
-    # exists to separate them (`within_autodiff()` is true at every level
-    # inside rule bodies). Plain Enzyme without caches handles all nesting
-    # combinations correctly. See the docs for the supported alternatives.
+    # Forward over reverse.
+    d2_fr = only(
+        Enzyme.autodiff(
+            set_runtime_activity(Forward), Const(dloss_r), Duplicated(0.3, 1.0), Const(stod)
+        )
+    )
+    @test d2_fr ≈ d2_fd
+
+    # Reverse over forward.
+    d2_rf = Enzyme.autodiff(
+        set_runtime_activity(Reverse), dloss_f, Active, Active(0.3), Const(stod)
+    )[1][1]
+    @test d2_rf ≈ d2_fd
 end
 
 function twofetch(τ, cache)

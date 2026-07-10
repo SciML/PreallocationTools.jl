@@ -364,22 +364,14 @@ upon to persist across separate calls into the differentiated code.
 ### Second-order differentiation with Enzyme
 
 The following nested differentiation patterns are supported and tested
-(`set_runtime_activity` is required by Enzyme for some of them):
+(`set_runtime_activity` is required by Enzyme for some of them, as it is for
+the equivalent nesting of cache-free code):
 
   - Forward-mode Enzyme over ForwardDiff
   - Reverse-mode Enzyme over ForwardDiff
   - Forward-mode Enzyme over forward-mode Enzyme
-
-!!! warning
-
-    Mixed-mode nesting of Enzyme over Enzyme (forward-over-reverse or
-    reverse-over-forward) of code that shares a single cache across both
-    differentiation levels is **not** supported and silently produces
-    incorrect derivatives: both levels fetch the same hidden shadow buffer
-    for the same cache, and Enzyme currently provides no way for a rule to
-    distinguish nesting levels. For second-order derivatives, use one of the
-    supported combinations above (e.g. ForwardDiff for the inner
-    differentiation, as in the nested ForwardDiff `levels` setup).
+  - Forward-mode Enzyme over reverse-mode Enzyme
+  - Reverse-mode Enzyme over forward-mode Enzyme
 
 ## Similar Projects
 
