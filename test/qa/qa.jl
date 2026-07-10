@@ -45,3 +45,7 @@ run_qa(
         ),
     ),
 )
+
+@testset "AllocCheck" begin
+    include("allocation_tests.jl")
+end
