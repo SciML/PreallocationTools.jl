@@ -319,6 +319,48 @@ prob = OptimizationProblem(fnc,
 solve(prob, LBFGS())
 ```
 
+## Enzyme Support
+
+Code written against the `DiffCache`/`get_tmp` API for ForwardDiff compatibility
+can also be differentiated with [Enzyme.jl](https://github.com/EnzymeAD/Enzyme.jl),
+in both forward and reverse mode. Enzyme itself does not need the dual caches —
+custom `EnzymeRules` are provided that hand Enzyme correctly-shaped shadow
+buffers so that the same cached code works with either AD engine:
+
+```julia
+using Enzyme, PreallocationTools
+
+randmat = rand(5, 3)
+cache = DiffCache(similar(randmat))
+
+function f(τ, cache)
+    tmp = get_tmp(cache, τ)
+    @. tmp = randmat * τ^2
+    return sum(abs2, tmp)
+end
+
+# Forward mode
+Enzyme.autodiff(Forward, f, Duplicated(0.3, 1.0), Const(cache))
+
+# Reverse mode
+Enzyme.autodiff(Reverse, f, Active, Active(0.3), Const(cache))
+```
+
+The cache can be passed to Enzyme as `Const` (as above, including implicitly by
+enclosing it in a `Const` closure or parameter struct) or as
+`Duplicated(cache, Enzyme.make_zero(cache))`. When the cache is `Const`, a
+hidden shadow cache is maintained per primal cache, kept separate from the
+ForwardDiff dual buffer so that Enzyme can even differentiate code that calls
+ForwardDiff internally (Enzyme-over-ForwardDiff). `DiffCache`,
+`FixedSizeDiffCache`, and `LazyBufferCache` are supported;
+`GeneralLazyBufferCache` is not, since its buffers are built by an arbitrary
+user function.
+
+These rules are correct under the documented usage contract of the caches: the
+buffer returned by `get_tmp` is scratch space that is fully written within the
+function that fetches it before being read, and its contents are not relied
+upon to persist across separate calls into the differentiated code.
+
 ## Similar Projects
 
 [AutoPreallocation.jl](https://github.com/oxinabox/AutoPreallocation.jl) tries
