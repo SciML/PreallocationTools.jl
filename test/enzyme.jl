@@ -143,6 +143,41 @@ end
     @test fdderiv(0.3) ≈ ForwardDiff.derivative(inner, 0.3)
 end
 
+@testset "Second order: reverse-mode Enzyme over ForwardDiff" begin
+    stod = DiffCache(similar(randmat))
+    fdderiv(τ, cache) = ForwardDiff.derivative(σ -> sum(claytonsample!(cache, σ, 0.0)), τ)
+    d2_fd = ForwardDiff.derivative(τ -> fdderiv(τ, stod), 0.3)
+
+    d2_enz = Enzyme.autodiff(
+        set_runtime_activity(Reverse), fdderiv, Active, Active(0.3), Const(stod)
+    )[1][1]
+    @test d2_enz ≈ d2_fd
+end
+
+@testset "Second order: forward-over-forward Enzyme" begin
+    stod = DiffCache(similar(randmat))
+    loss(τ, cache) = sum(abs2, claytonsample!(cache, τ, 0.0))
+    d2_fd = ForwardDiff.derivative(
+        τ -> ForwardDiff.derivative(σ -> loss(σ, stod), τ), 0.3
+    )
+
+    dloss(τ, cache) = only(Enzyme.autodiff(Forward, loss, Duplicated(τ, 1.0), Const(cache)))
+    d2_enz = only(
+        Enzyme.autodiff(
+            set_runtime_activity(Forward), Const(dloss), Duplicated(0.3, 1.0), Const(stod)
+        )
+    )
+    @test d2_enz ≈ d2_fd
+
+    # NOT tested because it is NOT currently supported: mixed-mode nesting
+    # (forward-over-reverse, reverse-over-forward) of Enzyme over Enzyme with
+    # a shared cache silently produces wrong derivatives — both nesting levels
+    # fetch the same hidden shadow for the same cache, and no runtime signal
+    # exists to separate them (`within_autodiff()` is true at every level
+    # inside rule bodies). Plain Enzyme without caches handles all nesting
+    # combinations correctly. See the docs for the supported alternatives.
+end
+
 function twofetch(τ, cache)
     a = get_tmp(cache, τ)
     fill!(a, τ)
