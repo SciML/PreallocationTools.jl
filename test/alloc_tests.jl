@@ -1,16 +1,19 @@
 # Allocation regression tests for PreallocationTools.jl
 # These tests ensure that key functions remain zero-allocation at runtime.
-# Note: On Julia 1.10, some type assertions cannot be constant-folded,
-# causing small allocations. These tests are marked as broken on 1.10.
 
 using Test
 using PreallocationTools
 using ForwardDiff
 
-# Helper macro for allocation tests that may fail on Julia 1.10
+# The `Dual`/scalar `get_tmp` paths return small wrapper objects (ReinterpretArray,
+# SubArray, ReshapedArray) or box scalars. On Julia 1.10 and 1.11 the optimizer
+# heap-allocates these O(1), constant-size wrappers (16-176 bytes, no data copies)
+# even when the result is discarded; Julia 1.12's improved escape analysis elides
+# them. The wrappers are the return value of the API, so the allocation cannot be
+# avoided in package code on the older versions.
 macro test_alloc(expr)
     return quote
-        if VERSION >= v"1.11"
+        if VERSION >= v"1.12"
             @test $(esc(expr)) == 0
         else
             @test_broken $(esc(expr)) == 0
@@ -91,13 +94,12 @@ end
         get_tmp(lbc, u_mat)
 
         # Test zero allocations on subsequent calls
-        # On Julia 1.10, the _buffer_type type assertion cannot be constant-folded
-        @test_alloc (@allocated get_tmp(lbc, u_vec))
-        @test_alloc (@allocated get_tmp(lbc, u_mat))
+        @test (@allocated get_tmp(lbc, u_vec)) == 0
+        @test (@allocated get_tmp(lbc, u_mat)) == 0
 
         # Test with getindex syntax
-        @test_alloc (@allocated lbc[u_vec])
-        @test_alloc (@allocated lbc[u_mat])
+        @test (@allocated lbc[u_vec]) == 0
+        @test (@allocated lbc[u_mat]) == 0
     end
 
     @testset "LazyBufferCache with size mapping" begin

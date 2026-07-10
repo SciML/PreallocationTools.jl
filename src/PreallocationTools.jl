@@ -278,9 +278,19 @@ function similar_type(x::AbstractArray{T}, s::NTuple{N, Integer}) where {T, N}
     return typeof(similar(x, ntuple(Returns(1), N)))
 end
 
-# Compute the type that `_make_buffer` would return for a given array and size.
-# When size matches the original, preserve the original type
-_buffer_type(x::AbstractArray, s) = s == size(x) ? typeof(similar(x)) : similar_type(x, s)
+# `similar(x)` preserves wrapper types (e.g. ComponentArrays) that dims-based
+# `similar(x, dims)` can strip, so its type is what the size-match branch of the
+# `get!` in `get_tmp` returns. The allocation is used only for its type: inference
+# resolves the result to a constant, and `:removable` lets the compiler delete the
+# full-size runtime allocation, which Julia 1.10/1.11 otherwise perform on every
+# `get_tmp` lookup (1.12+ elides it without the annotation).
+Base.@assume_effects :removable _preserved_similar_type(x::AbstractArray) = typeof(similar(x))
+
+# Compute the type that the buffer creation in `get_tmp` would return for a given
+# array and size. When size matches the original, preserve the original type.
+function _buffer_type(x::AbstractArray, s)
+    return s == size(x) ? _preserved_similar_type(x) : similar_type(x, s)
+end
 
 function get_tmp(
         b::LazyBufferCache, u::T, s = b.sizemap(size(u))
