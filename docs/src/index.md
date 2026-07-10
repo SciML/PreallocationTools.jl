@@ -55,6 +55,20 @@ the `levels` keyword (`N` for each level computed using based on the size of the
 state vector) or by specifying `N` as an array of integers of chunk sizes, which
 enables full control of chunk sizes on all differentiation levels.
 
+For resizeable multidimensional workspaces, keep the backing `DiffCache`
+one-dimensional and reshape it when a multidimensional cache is needed:
+
+```julia
+storage = DiffCache(zeros(10), 2)
+cache = reshape(storage, 2, 5)
+
+resize!(storage, 12)
+cache = reshape(storage, 2, 6)
+```
+
+The reshaped cache shares the normal cache storage with `storage`, while the
+dual cache storage remains vector-backed for `get_tmp`.
+
 ### DiffCache Example 1: Direct Usage
 
 ```julia
