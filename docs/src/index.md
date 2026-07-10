@@ -373,6 +373,11 @@ the equivalent nesting of cache-free code):
   - Forward-mode Enzyme over reverse-mode Enzyme
   - Reverse-mode Enzyme over forward-mode Enzyme
 
+The Enzyme-over-Enzyme combinations currently require Julia < 1.12: on 1.12+
+Enzyme fails to compile nested differentiation through these rules
+([EnzymeAD/Enzyme.jl#3315](https://github.com/EnzymeAD/Enzyme.jl/issues/3315)).
+Enzyme over ForwardDiff works on all supported Julia versions.
+
 ## Similar Projects
 
 [AutoPreallocation.jl](https://github.com/oxinabox/AutoPreallocation.jl) tries
