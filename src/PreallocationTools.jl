@@ -4,6 +4,17 @@ using Adapt: Adapt, adapt
 using ArrayInterface: ArrayInterface
 using PrecompileTools: @compile_workload, @setup_workload
 
+"""
+    FixedSizeDiffCache(u::AbstractArray, N = Val{forwarddiff_compat_chunk_size(length(u))})
+    FixedSizeDiffCache(u::AbstractArray, N::Integer)
+
+Build a fixed-size cache with storage for both the element type of `u` and the
+corresponding forward-mode automatic differentiation dual type.
+
+Use `get_tmp(cache, u)` to retrieve the cache matching the element type of `u`.
+`FixedSizeDiffCache` is most useful when the dual chunk size is known in
+advance and the cache size does not need to grow during differentiation.
+"""
 struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
     dual_du::S
@@ -24,13 +35,6 @@ end
 
 forwarddiff_compat_chunk_size(n) = 0
 
-"""
-`FixedSizeDiffCache(u::AbstractArray, N = Val{default_cache_size(length(u))})`
-
-Builds a `FixedSizeDiffCache` object that stores both a version of the cache for `u`
-and for the `Dual` version of `u`, allowing use of pre-cached vectors with
-forward-mode automatic differentiation.
-"""
 function FixedSizeDiffCache(
         u::AbstractArray,
         ::Type{Val{N}} = Val{forwarddiff_compat_chunk_size(length(u))}
@@ -50,16 +54,16 @@ chunksize(::Type{T}) where {T} = 0
 # ForwardDiff-specific methods moved to extension
 
 """
-    get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
+    get_tmp(cache, u)
+    get_tmp(cache, u, size)
 
-Returns the appropriate cache array from the `FixedSizeDiffCache` based on the type of `u`.
+Return cache storage appropriate for `u`.
 
-If `u` is a regular array or number, returns the standard cache `dc.du`. If `u` contains
-dual numbers (e.g., from ForwardDiff.jl), returns the dual cache array. The function
-automatically handles type promotion and resizing of internal caches as needed.
-
-This function enables seamless switching between regular and automatic differentiation
-computations without manual cache management.
+For `DiffCache` and `FixedSizeDiffCache`, this returns normal storage when `u`
+has the cached primal element type and dual-compatible storage when `u` carries
+automatic differentiation element types. For `LazyBufferCache` and
+`GeneralLazyBufferCache`, this lazily creates and reuses storage keyed by the
+type and size requested.
 """
 function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     return get_tmp(dc, eltype(u))
@@ -78,6 +82,22 @@ end
 
 # DiffCache
 
+"""
+    DiffCache(u::AbstractArray, N::Int = forwarddiff_compat_chunk_size(length(u)); levels::Int = 1, warn_on_resize::Bool = true)
+    DiffCache(u::AbstractArray, N::AbstractArray{<:Int}; warn_on_resize::Bool = true)
+
+Build a cache with storage for both the element type of `u` and the
+corresponding forward-mode automatic differentiation dual type.
+
+Use `get_tmp(cache, u)` to retrieve storage matching the element type of `u`.
+The `levels` keyword or vector-valued `N` supports nested automatic
+differentiation. Set `warn_on_resize = false` to suppress the warning emitted
+when `get_tmp` enlarges the dual cache, which can be useful when adaptive
+algorithms are expected to resize the cache.
+
+`DiffCache` also supports sparsity detection via
+[SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
+"""
 struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
     dual_du::S
@@ -98,23 +118,6 @@ function _zeroed_or_uninitialized(::Type{T}, dims...) where {T}
     return hasmethod(zero, Tuple{Type{T}}) ? zeros(T, dims...) : Array{T}(undef, dims...)
 end
 
-"""
-`DiffCache(u::AbstractArray, N::Int = forwarddiff_compat_chunk_size(length(u)); levels::Int = 1, warn_on_resize::Bool = true)`
-`DiffCache(u::AbstractArray; N::AbstractArray{<:Int}, warn_on_resize::Bool = true)`
-
-Builds a `DiffCache` object that stores both a version of the cache for `u`
-and for the `Dual` version of `u`, allowing use of pre-cached vectors with
-forward-mode automatic differentiation via
-[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl) (when available).
-Supports nested AD via keyword `levels` or specifying an array of chunk sizes.
-
-Set `warn_on_resize = false` to suppress the warning that is emitted when the
-cache is automatically enlarged during `get_tmp`. This is useful for adaptive
-solvers (e.g. BVP solvers) where cache expansion is expected behavior.
-
-The `DiffCache` also supports sparsity detection via
-[SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
-"""
 function DiffCache(
         u::AbstractArray, N::Int = forwarddiff_compat_chunk_size(length(u));
         levels::Int = 1, warn_on_resize::Bool = true
@@ -128,13 +131,19 @@ end
 DiffCache(u::AbstractArray, ::Val{N}; levels::Int = 1, warn_on_resize::Bool = true) where {N} = DiffCache(u, N; levels, warn_on_resize)
 
 # Deprecated: use DiffCache instead
+"""
+    dualcache(args...; warn_on_resize::Bool = true, kwargs...)
+
+Deprecated alias for `DiffCache(args...; warn_on_resize, kwargs...)`.
+Use `DiffCache` in new code.
+"""
 function dualcache(args...; warn_on_resize::Bool = true, kwargs...)
     Base.depwarn("`dualcache` is deprecated, use `DiffCache` instead.", :dualcache)
     return DiffCache(args...; warn_on_resize, kwargs...)
 end
 
 """
-`get_tmp(dc::DiffCache, u)`
+    get_tmp(dc::DiffCache, u)
 
 Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`.
 """
