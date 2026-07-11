@@ -248,3 +248,59 @@ dl = zeros(ForwardDiff.Dual{Nothing, Float64, 3}, 3)
     complex32_tmp = get_tmp(complex32_cache, DualT)
     @test eltype(complex32_tmp) == Complex{DualT}
 end
+
+@testset "DiffCache with Dual base eltype does not nest tags" begin
+    # AD-over-AD: the base buffer is allocated at an outer dual level (e.g.
+    # `DiffCache(similar(u))` while ForwardDiff-ing through a solver whose
+    # state was promoted to Dual). Requesting a buffer for the same dual type
+    # must return exactly that eltype, not a Dual re-tagged over the base.
+    OuterDual = ForwardDiff.Dual{ForwardDiff.Tag{:outer, Float64}, Float64, 3}
+    base = zeros(OuterDual, 5)
+    dc = DiffCache(base, 3)
+
+    same_level = get_tmp(dc, base)
+    @test eltype(same_level) === OuterDual
+
+    same_level_scalar = get_tmp(dc, first(base))
+    @test eltype(same_level_scalar) === OuterDual
+
+    # A genuinely nested request (inner AD over the outer-dual state) must
+    # still return the nested dual type unchanged.
+    NestedDual = ForwardDiff.Dual{ForwardDiff.Tag{:inner, OuterDual}, OuterDual, 2}
+    nested = get_tmp(dc, zeros(NestedDual, 5))
+    @test eltype(nested) === NestedDual
+end
+
+@testset "wrapper-of-Dual cache eltypes do not nest or corrupt tags" begin
+    # An isbits wrapper containing a dual as the cache base eltype (e.g. a
+    # complex-valued buffer allocated under an outer AD pass). A same-level
+    # dual request must return the cache's own eltype — descending into the
+    # stored dual would rewrite its Tag's value type (breaking ForwardDiff tag
+    # matching) and fabricate nesting one wrapper deeper.
+    D1 = ForwardDiff.Dual{ForwardDiff.Tag{:L1, Float64}, Float64, 3}
+    D2 = ForwardDiff.Dual{ForwardDiff.Tag{:L2, D1}, D1, 2}
+    D3 = ForwardDiff.Dual{ForwardDiff.Tag{:L3, D2}, D2, 4}
+
+    dc1 = DiffCache(zeros(Complex{D1}, 4), 3)
+    @test eltype(get_tmp(dc1, zeros(D1, 4))) === Complex{D1}       # same level
+    @test eltype(get_tmp(dc1, zeros(D2, 4))) === Complex{D2}       # genuinely nested
+    @test eltype(get_tmp(dc1, first(zeros(D1, 4)))) === Complex{D1}
+
+    dc2 = DiffCache(zeros(Complex{D2}, 4), 2)
+    @test eltype(get_tmp(dc2, zeros(D2, 4))) === Complex{D2}       # same level, depth 2
+    @test eltype(get_tmp(dc2, zeros(D3, 4))) === Complex{D3}       # deeper still
+
+    # A same-level request with a DIFFERENT tag (sibling AD) cannot be
+    # composed meaningfully with the stored dual; it must fall back to the
+    # bare requested dual with the stored dual left untouched — never a
+    # rewritten-tag hybrid.
+    D1b = ForwardDiff.Dual{ForwardDiff.Tag{:sibling, Float64}, Float64, 3}
+    T_sib = eltype(get_tmp(dc1, zeros(D1b, 4)))
+    @test T_sib === D1b
+
+    # plain-wrapper composition still works at every depth
+    dc0 = DiffCache(zeros(ComplexF64, 4), 3)
+    @test eltype(get_tmp(dc0, zeros(D1, 4))) === Complex{D1}
+    @test eltype(get_tmp(dc0, zeros(D2, 4))) === Complex{D2}
+    @test eltype(get_tmp(dc0, zeros(D3, 4))) === Complex{D3}
+end
