@@ -248,3 +248,25 @@ dl = zeros(ForwardDiff.Dual{Nothing, Float64, 3}, 3)
     complex32_tmp = get_tmp(complex32_cache, DualT)
     @test eltype(complex32_tmp) == Complex{DualT}
 end
+
+@testset "DiffCache with Dual base eltype does not nest tags" begin
+    # AD-over-AD: the base buffer is allocated at an outer dual level (e.g.
+    # `DiffCache(similar(u))` while ForwardDiff-ing through a solver whose
+    # state was promoted to Dual). Requesting a buffer for the same dual type
+    # must return exactly that eltype, not a Dual re-tagged over the base.
+    OuterDual = ForwardDiff.Dual{ForwardDiff.Tag{:outer, Float64}, Float64, 3}
+    base = zeros(OuterDual, 5)
+    dc = DiffCache(base, 3)
+
+    same_level = get_tmp(dc, base)
+    @test eltype(same_level) === OuterDual
+
+    same_level_scalar = get_tmp(dc, first(base))
+    @test eltype(same_level_scalar) === OuterDual
+
+    # A genuinely nested request (inner AD over the outer-dual state) must
+    # still return the nested dual type unchanged.
+    NestedDual = ForwardDiff.Dual{ForwardDiff.Tag{:inner, OuterDual}, OuterDual, 2}
+    nested = get_tmp(dc, zeros(NestedDual, 5))
+    @test eltype(nested) === NestedDual
+end

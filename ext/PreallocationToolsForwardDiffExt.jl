@@ -27,6 +27,12 @@ PreallocationTools.chunksize(::Type{ForwardDiff.Dual{T, V, N}}) where {T, V, N} 
 function dual_eltype(::Type{CacheT}, ::Type{DualT}) where {
         CacheT, Tag, V, N, DualT <: ForwardDiff.Dual{Tag, V, N},
     }
+    # A `Dual`-eltype cache means the base buffer was allocated at an outer
+    # dual level (AD-over-AD, e.g. `DiffCache(similar(u))` while
+    # ForwardDiff-ing through a solver). The requested dual type must then be
+    # returned as-is: recursing into `CacheT`'s type parameters would re-tag
+    # its value type and fabricate a nested dual the caller never asked for.
+    CacheT <: ForwardDiff.Dual && return DualT
     dual_cache_t = replace_type_parameter(CacheT, V, DualT)
     return dual_cache_t === CacheT ? DualT : dual_cache_t
 end
