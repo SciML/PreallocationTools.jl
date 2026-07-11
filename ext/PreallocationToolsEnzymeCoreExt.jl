@@ -22,9 +22,6 @@ using EnzymeCore: EnzymeRules, Annotation, Const, Duplicated, BatchDuplicated,
 #     is kept per primal cache (weakly keyed so it is freed with the cache).
 #     Persistence matters: two `get_tmp` calls on the same cache alias the same
 #     primal buffer, so their shadows must alias each other as well.
-#
-# For `LazyBufferCache` the registry shadow is used for every annotation, not
-# just `Const` — see the note at `ownshadow`.
 
 const SupportedCache = Union{DiffCache, FixedSizeDiffCache, LazyBufferCache}
 
@@ -53,10 +50,21 @@ shadowkey(b::LazyBufferCache) = b.bufs
 
 # `warn_on_resize = false`: the primal cache already warns if it is enlarged;
 # a second warning from the hidden shadow cache would be confusing.
-makeshadow(dc::DiffCache) = DiffCache(zero(dc.du), zero(dc.dual_du), Any[], false)
-makeshadow(dc::FixedSizeDiffCache) = zero(dc)
+# `@inline`: under nested differentiation these run inside Enzyme-compiled
+# code, and Enzyme's module type-classification cannot parse standalone
+# functions returning immutable structs with mixed pointer/isbits fields on
+# Julia <= 1.11 (sret+returnroots CallingConventionMismatchError); inlined
+# into `constshadow` no such function exists in the module.
+@inline makeshadow(dc::DiffCache) = DiffCache(
+    zero(dc.du), zero(dc.dual_du), Any[], false
+)
+@inline makeshadow(dc::FixedSizeDiffCache) = FixedSizeDiffCache(
+    zero(dc.du), zero(dc.dual_du), Any[]
+)
 zeroinit!(buf) = fill!(buf, zero(eltype(buf)))
-makeshadow(b::LazyBufferCache) = LazyBufferCache(b.sizemap; initializer! = zeroinit!)
+@inline makeshadow(b::LazyBufferCache) = LazyBufferCache(
+    b.sizemap; initializer! = zeroinit!
+)
 
 shadowfits(s::DiffCache, dc::DiffCache) = size(s.du) == size(dc.du)
 shadowfits(s::FixedSizeDiffCache, dc::FixedSizeDiffCache) = size(s.du) == size(dc.du)
@@ -69,15 +77,10 @@ function purgedeadshadows!()
     end
 end
 
-# The invokelatest barrier keeps the table operations out of the code Enzyme
-# compiles: rule bodies are processed by Enzyme's pipeline, which corrupts the
-# statically-visible Dict mutation (observed as broken lookups on the second
-# `get_tmp` of a differentiated call).
+# Rule bodies are compiled by Enzyme's pipeline; mutation of this global Dict
+# from a rule body was miscompiled before Enzyme 0.13.181
+# (EnzymeAD/Enzyme.jl#3310), hence the Enzyme compat lower bound.
 function constshadow(cache::SupportedCache, i::Int, rev::Bool)
-    return Base.invokelatest(_constshadow, cache, i, rev)
-end
-
-function _constshadow(cache::SupportedCache, i::Int, rev::Bool)
     key = shadowkey(cache)
     id = objectid(key)
     return lock(CONST_CACHE_SHADOWS_LOCK) do
@@ -101,26 +104,15 @@ function _constshadow(cache::SupportedCache, i::Int, rev::Bool)
 end
 
 shadowcache(dc::Const, i::Int, rev::Bool) = constshadow(dc.val, i, rev)
-shadowcache(dc::Duplicated, i::Int, rev::Bool) = ownshadow(dc.val, dc.dval, i, rev)
-shadowcache(dc::BatchDuplicated, i::Int, rev::Bool) = ownshadow(dc.val, dc.dval[i], i, rev)
-shadowcache(dc::MixedDuplicated, i::Int, rev::Bool) = ownshadow(dc.val, dc.dval[], i, rev)
-function shadowcache(dc::BatchMixedDuplicated, i::Int, rev::Bool)
-    return ownshadow(dc.val, dc.dval[i][], i, rev)
-end
-
-ownshadow(cache, dcache, i::Int, rev::Bool) = dcache
-# For a duplicated LazyBufferCache the registry shadow is used instead of the
-# user-provided one: creating the shadow buffer would have to insert into a
-# Dict that Enzyme is tracking, and Dict mutation from inside a rule body
-# corrupts the tracked shadow Dict via Enzyme's store mirroring (UndefRefError
-# on Julia 1.10). Under the scratch-buffer contract the identity of the shadow
-# buffer is unobservable, so this is a pure implementation detail.
-ownshadow(cache::LazyBufferCache, dcache, i::Int, rev::Bool) = constshadow(cache, i, rev)
+shadowcache(dc::Duplicated, i::Int, rev::Bool) = dc.dval
+shadowcache(dc::BatchDuplicated, i::Int, rev::Bool) = dc.dval[i]
+shadowcache(dc::MixedDuplicated, i::Int, rev::Bool) = dc.dval[]
+shadowcache(dc::BatchMixedDuplicated, i::Int, rev::Bool) = dc.dval[i][]
 
 # True when the rule supplies the shadow buffer from the persistent registry
 # (rather than from user-managed shadow memory).
 ownsshadow(dc::Const) = true
-ownsshadow(dc::Annotation) = dc.val isa LazyBufferCache
+ownsshadow(dc::Annotation) = false
 
 # Under runtime activity, Enzyme marks dynamically-inactive duplicated data by
 # passing a shadow egal to the primal; rules must propagate that marker.
