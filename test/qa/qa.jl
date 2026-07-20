@@ -2,7 +2,6 @@ using SciMLTesting, PreallocationTools, Test
 
 run_qa(
     PreallocationTools;
-    explicit_imports = true,
     aqua_kwargs = (; ambiguities = (; recursive = false)),
     ei_kwargs = (;
         # The package extensions load (and are analyzed by ExplicitImports) whenever
