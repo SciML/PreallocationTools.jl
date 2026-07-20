@@ -14,6 +14,25 @@ corresponding forward-mode automatic differentiation dual type.
 Use `get_tmp(cache, u)` to retrieve the cache matching the element type of `u`.
 `FixedSizeDiffCache` is most useful when the dual chunk size is known in
 advance and the cache size does not need to grow during differentiation.
+
+# Arguments
+
+  - `u`: prototype array whose shape and primal element type determine the cache.
+  - `N`: ForwardDiff chunk size. Pass `Val{N}` to encode it in the cache type, or an
+    integer as a convenience constructor.
+
+# Fields
+
+  - `du`: primal workspace with the shape and storage type of `u`.
+  - `dual_du`: workspace for dual-number evaluations.
+  - `any_du`: reusable temporary storage for nested dual reconstruction.
+
+# Examples
+
+```julia
+cache = FixedSizeDiffCache(zeros(3), 2)
+workspace = get_tmp(cache, zeros(3))
+```
 """
 struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
@@ -97,6 +116,30 @@ algorithms are expected to resize the cache.
 
 `DiffCache` also supports sparsity detection via
 [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
+
+# Arguments
+
+  - `u`: prototype array whose primal storage is cached.
+  - `N`: ForwardDiff chunk size, or one chunk size per nested AD level.
+
+# Keyword Arguments
+
+  - `levels`: number of nested forward-mode AD levels when `N` is scalar.
+  - `warn_on_resize`: whether to emit a one-time warning if dual storage grows.
+
+# Fields
+
+  - `du`: primal workspace.
+  - `dual_du`: dual-number workspace, enlarged on demand when necessary.
+  - `any_du`: reusable temporary storage for nested dual reconstruction.
+  - `warn_on_resize`: controls the resize warning policy.
+
+# Examples
+
+```julia
+cache = DiffCache(zeros(3), 2)
+workspace = get_tmp(cache, zeros(3))
+```
 """
 struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
