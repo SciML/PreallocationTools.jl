@@ -1,12 +1,8 @@
 # Internal Functions
 
-This page documents internal functions that are not part of the public API but may be encountered during debugging or when extending PreallocationTools.jl functionality.
+This page covers implementation details that are not part of the supported API.
 
 !!! warning
-    These are internal implementation details and may change without notice in any release. They should not be relied upon for user code.
-
-## Internal Helper Functions
-
-```@docs
-PreallocationTools.enlargediffcache!
-```
+These implementation details may change without notice and should not be used by
+user code. Versioned extension points are documented separately under
+[Developer API](@ref).

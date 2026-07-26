@@ -3,6 +3,7 @@ module PreallocationTools
 using Adapt: Adapt, adapt
 using ArrayInterface: ArrayInterface
 using PrecompileTools: @compile_workload, @setup_workload
+using SciMLPublic: @public
 
 """
     FixedSizeDiffCache(u::AbstractArray, N = Val{forwarddiff_compat_chunk_size(length(u))})
@@ -40,8 +41,29 @@ struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     any_du::Vector{Any}
 end
 
-# Mutable container to hold dual array creator that can be updated by extension
+"""
+    dualarraycreator(u::AbstractArray, size, ::Type{Val{N}})
+
+Developer extension hook that constructs the dual-number workspace for
+[`FixedSizeDiffCache`](@ref).
+
+This is a PreallocationTools implementation API, not a stable end-user
+customization point. Extensions may add a method only when they own the
+dual-number type used in the returned storage.
+
+# Arguments
+
+  - `u`: primal cache prototype whose array representation must be preserved.
+  - `size`: dimensions of the workspace to allocate.
+  - `N`: dual chunk size encoded by `Val`.
+
+# Return
+
+Return an array with the requested dimensions that can store dual values with
+chunk size `N`. It must preserve the representation required by `u`.
+"""
 dualarraycreator(args...) = nothing
+@public dualarraycreator
 
 function FixedSizeDiffCache(
         u::AbstractArray{T}, siz,
@@ -52,7 +74,18 @@ function FixedSizeDiffCache(
     return FixedSizeDiffCache(deepcopy(u), x, xany)
 end
 
-forwarddiff_compat_chunk_size(n) = 0
+"""
+    forwarddiff_compat_chunk_size(n::Integer)
+
+Developer extension hook returning the default dual chunk size for a cache with
+`n` primal elements.
+
+This hook is used by [`DiffCache`](@ref) and [`FixedSizeDiffCache`](@ref) when
+their callers omit `N`. Extensions that own an AD backend may specialize it;
+the returned value must be a nonnegative integer accepted by that backend.
+"""
+forwarddiff_compat_chunk_size(n::Integer) = 0
+@public forwarddiff_compat_chunk_size
 
 function FixedSizeDiffCache(
         u::AbstractArray,
@@ -67,8 +100,17 @@ function FixedSizeDiffCache(u::AbstractArray, N::Integer)
     return FixedSizeDiffCache(u, size(u), Val{N})
 end
 
-# Generic fallback for chunksize
+"""
+    chunksize(::Type{T})
+
+Developer extension hook returning the AD chunk size encoded by scalar type
+`T`, or `0` when `T` carries no chunk-size information.
+
+Extensions may specialize this only for scalar types they own. The result is
+used to determine whether a fixed-size cache can reuse its dual workspace.
+"""
 chunksize(::Type{T}) where {T} = 0
+@public chunksize
 
 # ForwardDiff-specific methods moved to extension
 
@@ -83,6 +125,32 @@ has the cached primal element type and dual-compatible storage when `u` carries
 automatic differentiation element types. For `LazyBufferCache` and
 `GeneralLazyBufferCache`, this lazily creates and reuses storage keyed by the
 type and size requested.
+
+# Arguments
+
+  - `cache`: a cache created by this package, or another object for which the
+    generic fallback should return `cache` itself.
+  - `u`: a value, array, or scalar type describing the element type and, for
+    lazy buffers, the requested shape.
+  - `size`: optional lazy-buffer shape; it is accepted only by
+    `LazyBufferCache`.
+
+# Return
+
+The returned workspace is owned by `cache` and is reused by later matching
+lookups. Callers must fully overwrite scratch storage before reading it and
+must not retain it across calls that can request the same cache entry.
+
+# Examples
+
+```jldoctest
+julia> using PreallocationTools
+
+julia> cache = DiffCache(zeros(2), 1);
+
+julia> get_tmp(cache, zeros(2)) === cache.du
+true
+```
 """
 function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     return get_tmp(dc, eltype(u))
@@ -150,12 +218,14 @@ end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes; warn_on_resize::Bool = true) where {T}
     x = adapt(
-        ArrayInterface.parameterless_type(u),
+        _parameterless_type(u),
         _zeroed_or_uninitialized(T, prod(chunk_sizes .+ 1) * prod(siz))
     )
     xany = Any[]
     return DiffCache(u, x, xany, warn_on_resize)
 end
+
+_parameterless_type(x) = typeof(x).name.wrapper
 
 function _zeroed_or_uninitialized(::Type{T}, dims...) where {T}
     return hasmethod(zero, Tuple{Type{T}}) ? zeros(T, dims...) : Array{T}(undef, dims...)
@@ -179,6 +249,16 @@ DiffCache(u::AbstractArray, ::Val{N}; levels::Int = 1, warn_on_resize::Bool = tr
 
 Deprecated alias for `DiffCache(args...; warn_on_resize, kwargs...)`.
 Use `DiffCache` in new code.
+
+# Arguments
+
+  - `args`: positional arguments accepted by [`DiffCache`](@ref).
+
+# Keyword Arguments
+
+  - `warn_on_resize`: forwarded to [`DiffCache`](@ref); controls whether an
+    undersized dual workspace emits its one-time resize warning.
+  - `kwargs`: additional keywords accepted by [`DiffCache`](@ref).
 """
 function dualcache(args...; warn_on_resize::Bool = true, kwargs...)
     Base.depwarn("`dualcache` is deprecated, use `DiffCache` instead.", :dualcache)
@@ -243,13 +323,24 @@ get_tmp(dc, u) = dc
 """
     _restructure(normal_cache::AbstractArray, duals)
 
-Internal function that reshapes a flat array of dual numbers to match the shape of the
-normal cache array. For standard `Array` types, uses `reshape`. For other `AbstractArray`
-types, delegates to `ArrayInterface.restructure` to handle custom array types properly.
+Developer extension helper that gives flat dual storage the representation and
+shape of `normal_cache`.
+
+This is an implementation API for PreallocationTools extensions, not an
+end-user customization point. `duals` must contain enough elements for
+`normal_cache`; the returned array must have `size(normal_cache)` and represent
+the same dual values. The default uses `reshape` for ordinary arrays and
+`ArrayInterface.restructure` for custom array representations.
+
+# Arguments
+
+  - `normal_cache`: primal workspace whose representation is to be preserved.
+  - `duals`: flat dual-number storage to reshape or restructure.
 """
 function _restructure(normal_cache::Array, duals)
     return reshape(duals, size(normal_cache)...)
 end
+@public _restructure
 
 function _restructure(normal_cache::AbstractArray, duals)
     if _has_vector_view_parent(normal_cache)
@@ -267,23 +358,21 @@ end
 """
     enlargediffcache!(dc::DiffCache, nelem::Integer)
 
-Enlarges the dual cache array in a `DiffCache` when it's found to be too small.
+Developer extension helper that enlarges `dc.dual_du` to hold `nelem` elements.
 
-This function is called internally when automatic differentiation requires a larger
-dual cache than initially allocated. It resizes `dc.dual_du` to accommodate `nelem`
-elements and issues a one-time warning suggesting an appropriate chunk size for
-optimal performance.
+This is an implementation API for AD extensions. Call it only when an extension
+has established that its requested dual representation needs more storage than
+the cache currently owns. It emits the cache's one-time resize warning when
+`dc.warn_on_resize` is enabled.
 
-## Arguments
+# Arguments
 
-  - `dc`: The `DiffCache` object to enlarge
-  - `nelem`: The new required number of elements
+  - `dc`: cache whose dual workspace is to be enlarged.
+  - `nelem`: required number of elements in `dc.dual_du`; it must be nonnegative.
 
-## Notes
+# Return
 
-The warning is shown only once per `DiffCache` instance to avoid spam. For optimal
-performance in production code, pre-allocate with the suggested chunk size to avoid
-runtime allocations.
+Returns the resized dual workspace.
 """
 function enlargediffcache!(dc, nelem) #warning comes only once per DiffCache.
     if dc.warn_on_resize
@@ -294,21 +383,50 @@ function enlargediffcache!(dc, nelem) #warning comes only once per DiffCache.
     end
     return resize!(dc.dual_du, nelem)
 end
+@public enlargediffcache!
 
 # LazyBufferCache
 
 """
     b = LazyBufferCache(f = identity; initializer! = identity)
 
-A lazily allocated buffer object.  Given an array `u`, `b[u]` returns an array of the
-same type and size `f(size(u))` (defaulting to the same size), which is allocated as
-needed and then cached within `b` for subsequent usage.
+A lazily allocated buffer cache. Given an array `u`, `b[u]` or `get_tmp(b, u)`
+returns an array with a shape chosen from `size(u)`. The cache allocates that
+buffer on its first matching lookup and returns the same object on later
+lookups.
 
-By default the created buffers are not initialized, but a function `initializer!`
-can be supplied which is applied to the buffer when it is created, for instance `buf -> fill!(buf, 0.0)`.
+# Arguments
 
-Optionally, the size can be explicitly given at calltime using `b[u,s]`, which will
-return a cache of size `s`.
+  - `f`: maps `size(u)` to the requested buffer dimensions. The default,
+    `identity`, preserves the input shape.
+
+# Keyword Arguments
+
+  - `initializer!`: function applied once to each newly allocated buffer. The
+    default leaves the buffer uninitialized; use, for example,
+    `buf -> fill!(buf, 0.0)` when callers require initialized scratch storage.
+
+# Fields
+
+  - `bufs`: cache from prototype array type and requested dimensions to a
+    reusable buffer.
+  - `sizemap`: shape-mapping function supplied as `f`.
+  - `initializer!`: initialization function applied to newly allocated buffers.
+
+Pass an explicit shape as `b[u, s]` or `get_tmp(b, u, s)` to override `f` for
+one cache entry. Scratch buffers are shared for matching keys, so callers must
+overwrite them before reading.
+
+# Examples
+
+```jldoctest
+julia> using PreallocationTools
+
+julia> cache = LazyBufferCache();
+
+julia> size(get_tmp(cache, zeros(2), (3,)))
+(3,)
+```
 """
 struct LazyBufferCache{F <: Function, I <: Function}
     bufs::Dict{Any, Any} # a dictionary mapping (type, size) pairs to buffers
@@ -369,16 +487,35 @@ end
 """
     b = GeneralLazyBufferCache(f=identity)
 
-A lazily allocated buffer object.  Given an array `u`, `b[u]` returns a cache object
-generated by `f(u)`, but the generator is only run the first time (and all subsequent
-times it reuses the same cache)
+A lazily allocated cache keyed by the concrete type of its input. Given `u`,
+`b[u]` or `get_tmp(b, u)` calls `f(u)` on the first lookup for `typeof(u)` and
+returns that same cached object for later lookups of the type.
 
-## Limitation
+# Arguments
 
-The main limitation of this method is that its return is not type-inferred, and thus
-it can be slower than some other preallocation techniques. However, if used
-correct using things like function barriers, then this is a general technique that
-is sufficiently fast.
+  - `f`: function used to construct a cache object from the first input of each
+    concrete type. The default is `identity`.
+
+# Fields
+
+  - `bufs`: map from concrete input type to the reusable object produced by `f`.
+  - `f`: cache-construction function.
+
+# Limitation
+
+The result is not type-inferred because the backing map has `Any` values. Use a
+function barrier around the lookup when inference matters.
+
+# Examples
+
+```jldoctest
+julia> using PreallocationTools
+
+julia> cache = GeneralLazyBufferCache(T -> Vector{T}(undef, 2));
+
+julia> get_tmp(cache, Float64) === get_tmp(cache, Float64)
+true
+```
 """
 struct GeneralLazyBufferCache{F <: Function}
     bufs::Dict{Any, Any} # a dictionary mapping types to buffers
