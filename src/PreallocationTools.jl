@@ -16,6 +16,11 @@ Use `get_tmp(cache, u)` to retrieve the cache matching the element type of `u`.
 `FixedSizeDiffCache` is most useful when the dual chunk size is known in
 advance and the cache size does not need to grow during differentiation.
 
+For vector-backed caches, `resize!(cache, n)` resizes the primal, dual, and
+nested-dual scratch storage and returns `cache`. Resizing a cache with a
+non-vector primal workspace throws `ArgumentError`; an extension-provided dual
+workspace must support `resize!` when callers need this operation.
+
 # Arguments
 
   - `u`: prototype array whose shape and primal element type determine the cache.
@@ -44,23 +49,55 @@ end
 """
     dualarraycreator(u::AbstractArray, size, ::Type{Val{N}})
 
-Developer extension hook that constructs the dual-number workspace for
+Construct the automatic-differentiation workspace of a
 [`FixedSizeDiffCache`](@ref).
 
-This is a PreallocationTools implementation API, not a stable end-user
-customization point. Extensions may add a method only when they own the
-dual-number type used in the returned storage.
+# Interface
+
+This is a versioned developer interface for an AD package or array package,
+not an end-user customization point. An extension may add a method only when
+it owns the concrete type of `u` or the AD scalar stored by the result. Define
+a method with the following shape:
+
+```julia
+PreallocationTools.dualarraycreator(
+    u::MyArray{T}, size, ::Type{Val{N}}
+) where {T, N}
+```
+
+`FixedSizeDiffCache` calls this hook while constructing its dual workspace.
+The method must not extend an array representation or scalar type owned by an
+unrelated package.
 
 # Arguments
 
-  - `u`: primal cache prototype whose array representation must be preserved.
-  - `size`: dimensions of the workspace to allocate.
-  - `N`: dual chunk size encoded by `Val`.
+  - `u`: primal cache prototype. Its representation and axes define the
+    representation expected from the returned workspace.
+  - `size`: dimensions of the workspace to allocate. It is a tuple of
+    nonnegative integer dimensions supplied by the constructor.
+  - `N`: nonnegative AD chunk size encoded by `Val`.
 
 # Return
 
-Return an array with the requested dimensions that can store dual values with
-chunk size `N`. It must preserve the representation required by `u`.
+Return a newly allocated `AbstractArray` with dimensions `size`, whose element
+type can represent the extension's AD values with chunk size `N`. The result
+must preserve the array representation and axes required by `u`; it must not
+alias `u`. For vector-backed caches, provide a resizable result when callers
+need to use [`resize!`](@ref) on the cache.
+
+# Failure Behavior
+
+Do not define a method for unsupported representations. A constructor for
+which no extension provides a workspace fails normally rather than silently
+creating an incompatible cache.
+
+# Example
+
+```julia
+PreallocationTools.dualarraycreator(
+    u::MyAD.Array{T}, size, ::Type{Val{N}}
+) where {T, N} = MyAD.Array{MyAD.Dual{T, N}}(undef, size)
+```
 """
 dualarraycreator(args...) = nothing
 @public dualarraycreator
@@ -77,12 +114,36 @@ end
 """
     forwarddiff_compat_chunk_size(n::Integer)
 
-Developer extension hook returning the default dual chunk size for a cache with
-`n` primal elements.
+Return the default AD chunk size for a cache with `n` primal elements.
 
-This hook is used by [`DiffCache`](@ref) and [`FixedSizeDiffCache`](@ref) when
-their callers omit `N`. Extensions that own an AD backend may specialize it;
-the returned value must be a nonnegative integer accepted by that backend.
+# Interface
+
+This is a versioned developer interface used by [`DiffCache`](@ref) and
+[`FixedSizeDiffCache`](@ref) when callers omit `N`. An AD backend that provides
+the process-wide default may specialize
+`forwarddiff_compat_chunk_size(n::Int)`. Because the argument is a built-in
+integer, only one active backend should provide that default; packages that
+need a different chunk size should pass `N` explicitly to the constructor.
+
+# Arguments
+
+  - `n`: number of primal elements in the requested cache. It is nonnegative.
+
+# Return
+
+Return a nonnegative `Int` accepted by the backend. The fallback returns `0`,
+which represents no preallocated dual partials.
+
+# Failure Behavior
+
+Returning a negative value or a value unsupported by the backend violates the
+interface and may make cache construction fail.
+
+# Example
+
+```julia
+PreallocationTools.forwarddiff_compat_chunk_size(n::Int) = MyAD.default_chunk_size(n)
+```
 """
 forwarddiff_compat_chunk_size(n::Integer) = 0
 @public forwarddiff_compat_chunk_size
@@ -103,11 +164,34 @@ end
 """
     chunksize(::Type{T})
 
-Developer extension hook returning the AD chunk size encoded by scalar type
-`T`, or `0` when `T` carries no chunk-size information.
+Return the AD chunk size encoded by scalar type `T`.
 
-Extensions may specialize this only for scalar types they own. The result is
-used to determine whether a fixed-size cache can reuse its dual workspace.
+# Interface
+
+This is a versioned developer interface for AD scalar types. An extension may
+specialize `chunksize(::Type{MyADScalar})` only for scalar types it owns. The
+result lets [`FixedSizeDiffCache`](@ref) decide whether its dual workspace can
+be reused for a requested scalar type.
+
+# Arguments
+
+  - `T`: a scalar type. `T` may encode an AD chunk size in its type parameters.
+
+# Return
+
+Return the nonnegative `Int` chunk size encoded by `T`. Return `0` when `T`
+does not encode chunk-size information; this is the fallback behavior.
+
+# Failure Behavior
+
+Do not return a chunk size different from the representation encoded by `T`.
+An incorrect result can select a workspace with incompatible capacity.
+
+# Example
+
+```julia
+PreallocationTools.chunksize(::Type{MyAD.Dual{T, N}}) where {T, N} = N
+```
 """
 chunksize(::Type{T}) where {T} = 0
 @public chunksize
@@ -140,6 +224,16 @@ type and size requested.
 The returned workspace is owned by `cache` and is reused by later matching
 lookups. Callers must fully overwrite scratch storage before reading it and
 must not retain it across calls that can request the same cache entry.
+
+# Developer Interface
+
+An AD extension may specialize `get_tmp` for `DiffCache` or
+`FixedSizeDiffCache` and a scalar type that it owns. The method must return
+scratch storage with the cache's logical axes and an element representation
+compatible with the requested scalar type. It must use only the public cache
+fields and developer hooks documented on the Developer API page, and it must
+not return storage that aliases the primal workspace unless that representation
+explicitly permits it.
 
 # Examples
 
@@ -184,6 +278,11 @@ algorithms are expected to resize the cache.
 
 `DiffCache` also supports sparsity detection via
 [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
+
+For vector-backed caches, `resize!(cache, n)` resizes the primal and
+nested-dual scratch storage while preserving the current dual-storage capacity
+per primal element, then returns `cache`. Resizing a cache with a non-vector
+primal workspace throws `ArgumentError`.
 
 # Arguments
 
@@ -323,19 +422,40 @@ get_tmp(dc, u) = dc
 """
     _restructure(normal_cache::AbstractArray, duals)
 
-Developer extension helper that gives flat dual storage the representation and
-shape of `normal_cache`.
+Give AD workspace storage the representation and shape of `normal_cache`.
 
-This is an implementation API for PreallocationTools extensions, not an
-end-user customization point. `duals` must contain enough elements for
-`normal_cache`; the returned array must have `size(normal_cache)` and represent
-the same dual values. The default uses `reshape` for ordinary arrays and
-`ArrayInterface.restructure` for custom array representations.
+# Interface
+
+This is a versioned developer interface for AD or array extensions, not an
+end-user customization point. An extension may specialize
+`_restructure(normal_cache::MyArray, duals)` only when it owns the concrete
+array representation of `normal_cache`. The default uses `reshape` for
+ordinary arrays and `ArrayInterface.restructure` for custom representations.
 
 # Arguments
 
-  - `normal_cache`: primal workspace whose representation is to be preserved.
-  - `duals`: flat dual-number storage to reshape or restructure.
+  - `normal_cache`: primal workspace whose representation and axes must be
+    preserved.
+  - `duals`: AD storage containing at least `length(normal_cache)` logical
+    values in linear-index order.
+
+# Return
+
+Return an `AbstractArray` with `axes(result) == axes(normal_cache)`. Its values
+must correspond to `duals` in linear-index order, and mutations through the
+result must update the supplied `duals`; implementations must not copy the
+workspace merely to change its representation.
+
+# Failure Behavior
+
+Throw a clear error when `duals` cannot represent the requested axes or when
+the extension cannot preserve the required array representation.
+
+# Example
+
+```julia
+PreallocationTools._restructure(cache::MyAD.Array, duals) = MyAD.Array(duals, axes(cache))
+```
 """
 function _restructure(normal_cache::Array, duals)
     return reshape(duals, size(normal_cache)...)
@@ -358,21 +478,39 @@ end
 """
     enlargediffcache!(dc::DiffCache, nelem::Integer)
 
-Developer extension helper that enlarges `dc.dual_du` to hold `nelem` elements.
+Resize the dual workspace owned by a [`DiffCache`](@ref).
 
-This is an implementation API for AD extensions. Call it only when an extension
-has established that its requested dual representation needs more storage than
-the cache currently owns. It emits the cache's one-time resize warning when
-`dc.warn_on_resize` is enabled.
+# Interface
+
+This is a versioned developer interface for AD extensions. Call it from a
+specialized [`get_tmp`](@ref) method only after establishing that the requested
+AD representation needs additional storage. The extension must own the scalar
+type used to select that representation. It must not resize `dc.dual_du`
+directly, because this helper applies the cache's warning policy.
 
 # Arguments
 
-  - `dc`: cache whose dual workspace is to be enlarged.
-  - `nelem`: required number of elements in `dc.dual_du`; it must be nonnegative.
+  - `dc`: `DiffCache` whose dual workspace is vector-backed and resizable.
+  - `nelem`: required number of elements in `dc.dual_du`. It must be at least
+    the current capacity and nonnegative.
 
 # Return
 
-Returns the resized dual workspace.
+Return the resized `dc.dual_du` workspace. The returned storage remains owned
+by `dc`; callers must use [`_restructure`](@ref) before exposing it with the
+primal cache's representation.
+
+# Failure Behavior
+
+Calling this hook for a non-resizable dual workspace, or with an invalid
+capacity, is unsupported and may throw from `resize!`.
+
+# Example
+
+```julia
+needed = chunksize(ADScalar) * length(cache.du)
+needed > length(cache.dual_du) && enlargediffcache!(cache, needed)
+```
 """
 function enlargediffcache!(dc, nelem) #warning comes only once per DiffCache.
     if dc.warn_on_resize
@@ -530,8 +668,36 @@ function get_tmp(b::GeneralLazyBufferCache, u::T) where {T}
 end
 Base.getindex(b::GeneralLazyBufferCache, u::T) where {T} = get_tmp(b, u)
 
-# resize! methods for PreallocationTools types
-# Note: resize! only works for 1D arrays (vectors)
+"""
+    resize!(cache::DiffCache, n::Integer)
+    resize!(cache::FixedSizeDiffCache, n::Integer)
+
+Resize a vector-backed cache to `n` primal elements.
+
+# Arguments
+
+  - `cache`: a `DiffCache` or `FixedSizeDiffCache` whose primal workspace is a
+    vector.
+  - `n`: nonnegative target length for the primal workspace.
+
+# Return
+
+Return the same cache object. `DiffCache` preserves its current dual-storage
+capacity per primal element; `FixedSizeDiffCache` resizes vector-backed dual
+storage to `n`. Both methods resize the nested-dual scratch vector to `n`.
+
+# Developer Interface
+
+An extension that supplies vector-backed dual storage through
+[`dualarraycreator`](@ref) must implement `resize!` for that storage when it
+expects callers to resize the enclosing cache. It must preserve the storage's
+element representation after resizing.
+
+# Failure Behavior
+
+Resizing is unsupported for caches with non-vector primal storage and throws
+`ArgumentError`.
+"""
 function Base.resize!(dc::DiffCache, n::Integer)
     # Only resize if the array is a vector
     if dc.du isa AbstractVector
