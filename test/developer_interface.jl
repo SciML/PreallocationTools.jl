@@ -2,46 +2,46 @@ using PreallocationTools, Test
 
 module MockADExtension
 
-using PreallocationTools
+    using PreallocationTools
 
-struct MockDual{N} <: Number
-    value::Float64
-end
-
-Base.zero(::Type{MockDual{N}}) where {N} = MockDual{N}(0.0)
-
-mutable struct MockVector{T} <: AbstractVector{T}
-    data::Vector{T}
-end
-
-Base.IndexStyle(::Type{<:MockVector}) = IndexLinear()
-Base.size(v::MockVector) = size(v.data)
-Base.getindex(v::MockVector, i::Int) = v.data[i]
-Base.setindex!(v::MockVector, x, i::Int) = (v.data[i] = x)
-Base.resize!(v::MockVector, n::Integer) = (resize!(v.data, n); v)
-
-function PreallocationTools.dualarraycreator(
-        u::MockVector{T}, size, ::Type{Val{N}}
-    ) where {T, N}
-    return MockVector(fill(zero(MockDual{N}), prod(size)))
-end
-
-PreallocationTools.chunksize(::Type{MockDual{N}}) where {N} = N
-
-function PreallocationTools._restructure(normal_cache::MockVector, duals)
-    return MockVector(duals)
-end
-
-function PreallocationTools.get_tmp(
-        dc::PreallocationTools.DiffCache, ::Type{MockDual{N}}
-    ) where {N}
-    needed = N * length(dc.du)
-    if needed > length(dc.dual_du)
-        PreallocationTools.enlargediffcache!(dc, needed)
+    struct MockDual{N} <: Number
+        value::Float64
     end
-    duals = reinterpret(MockDual{N}, view(dc.dual_du, 1:length(dc.du)))
-    return PreallocationTools._restructure(dc.du, duals)
-end
+
+    Base.zero(::Type{MockDual{N}}) where {N} = MockDual{N}(0.0)
+
+    mutable struct MockVector{T} <: AbstractVector{T}
+        data::Vector{T}
+    end
+
+    Base.IndexStyle(::Type{<:MockVector}) = IndexLinear()
+    Base.size(v::MockVector) = size(v.data)
+    Base.getindex(v::MockVector, i::Int) = v.data[i]
+    Base.setindex!(v::MockVector, x, i::Int) = (v.data[i] = x)
+    Base.resize!(v::MockVector, n::Integer) = (resize!(v.data, n); v)
+
+    function PreallocationTools.dualarraycreator(
+            u::MockVector{T}, size, ::Type{Val{N}}
+        ) where {T, N}
+        return MockVector(fill(zero(MockDual{N}), prod(size)))
+    end
+
+    PreallocationTools.chunksize(::Type{MockDual{N}}) where {N} = N
+
+    function PreallocationTools._restructure(normal_cache::MockVector, duals)
+        return MockVector(duals)
+    end
+
+    function PreallocationTools.get_tmp(
+            dc::PreallocationTools.DiffCache, ::Type{MockDual{N}}
+        ) where {N}
+        needed = N * length(dc.du)
+        if needed > length(dc.dual_du)
+            PreallocationTools.enlargediffcache!(dc, needed)
+        end
+        duals = reinterpret(MockDual{N}, view(dc.dual_du, 1:length(dc.du)))
+        return PreallocationTools._restructure(dc.du, duals)
+    end
 
 end
 
