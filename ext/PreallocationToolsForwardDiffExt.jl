@@ -1,10 +1,9 @@
 module PreallocationToolsForwardDiffExt
 
 using PreallocationTools
-using ForwardDiff
-using ArrayInterface
-using Adapt
-using PrecompileTools
+using ForwardDiff: ForwardDiff
+using ArrayInterface: ArrayInterface
+using PrecompileTools: @setup_workload, @compile_workload
 
 function PreallocationTools.dualarraycreator(
         u::AbstractArray{T}, siz,
@@ -72,7 +71,7 @@ function replace_type_parameter(::Type{T}, ::Type{From}, ::Type{To}) where {T, F
         parameter isa Type ? replace_type_parameter(parameter, From, To) : parameter
     end
 
-    return new_parameters == parameters ? T : Core.apply_type(wrapper, new_parameters...)
+    return new_parameters == parameters ? T : wrapper{new_parameters...}
 end
 
 function diffcache_dual_tmp(dc::PreallocationTools.DiffCache, ::Type{T}) where {T <: ForwardDiff.Dual}
