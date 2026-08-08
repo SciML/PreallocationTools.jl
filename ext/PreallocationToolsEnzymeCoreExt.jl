@@ -50,21 +50,10 @@ shadowkey(b::LazyBufferCache) = b.bufs
 
 # `warn_on_resize = false`: the primal cache already warns if it is enlarged;
 # a second warning from the hidden shadow cache would be confusing.
-# `@inline`: under nested differentiation these run inside Enzyme-compiled
-# code, and Enzyme's module type-classification cannot parse standalone
-# functions returning immutable structs with mixed pointer/isbits fields on
-# Julia <= 1.11 (sret+returnroots CallingConventionMismatchError); inlined
-# into `constshadow` no such function exists in the module.
-@inline makeshadow(dc::DiffCache) = DiffCache(
-    zero(dc.du), zero(dc.dual_du), Any[], false
-)
-@inline makeshadow(dc::FixedSizeDiffCache) = FixedSizeDiffCache(
-    zero(dc.du), zero(dc.dual_du), Any[]
-)
+makeshadow(dc::DiffCache) = DiffCache(zero(dc.du), zero(dc.dual_du), Any[], false)
+makeshadow(dc::FixedSizeDiffCache) = zero(dc)
 zeroinit!(buf) = fill!(buf, zero(eltype(buf)))
-@inline makeshadow(b::LazyBufferCache) = LazyBufferCache(
-    b.sizemap; initializer! = zeroinit!
-)
+makeshadow(b::LazyBufferCache) = LazyBufferCache(b.sizemap; initializer! = zeroinit!)
 
 shadowfits(s::DiffCache, dc::DiffCache) = size(s.du) == size(dc.du)
 shadowfits(s::FixedSizeDiffCache, dc::FixedSizeDiffCache) = size(s.du) == size(dc.du)
