@@ -60,4 +60,44 @@ end
     end
 end
 
+function f2(u, cache)
+    writer = get_tmp(cache, u)
+    writer .= u
+    reader = get_tmp(cache, u)
+    # The second fetch must observe what was written through the first one
+    return sum(reader)
+end
+
+# https://github.com/SciML/PreallocationTools.jl/issues/197
+@testset "repeated fetches share storage" begin
+    u = rand(4)
+    cache = DiffCache(u)
+
+    # Writing through one fetch and reading through another must propagate every
+    # input to the output; with per-call allocation the read observes unwritten
+    # memory instead and errors (or segfaults) during detection.
+    S = jacobian_sparsity(x -> f2(x, cache), u, TracerSparsityDetector())
+    @test S == ones(1, length(u))
+    S = jacobian_sparsity(x -> f2(x, cache), u, TracerLocalSparsityDetector())
+    @test S == ones(1, length(u))
+
+    # Aliasing assertion that fails cleanly instead of segfaulting, on the tracer
+    # type detection actually uses.
+    tracer_types = DataType[]
+    jacobian_sparsity(u, TracerSparsityDetector()) do x
+        c = get_tmp(cache, x)
+        push!(tracer_types, eltype(c))
+        c .= x
+        sum(c)
+    end
+    T = only(unique(tracer_types))
+    @test isconcretetype(T)
+    @test eltype(get_tmp(cache, T)) === T
+    @test Base.mightalias(get_tmp(cache, T), get_tmp(cache, T))
+
+    # Tracer workspaces follow cache resizing
+    resize!(cache, 6)
+    @test length(get_tmp(cache, T)) == 6
+end
+
 end

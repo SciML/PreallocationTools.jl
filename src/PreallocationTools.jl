@@ -299,6 +299,8 @@ primal workspace throws `ArgumentError`.
   - `du`: primal workspace.
   - `dual_du`: dual-number workspace, enlarged on demand when necessary.
   - `any_du`: reusable temporary storage for nested dual reconstruction.
+  - `typed_du`: lazily allocated persistent workspaces for element types that can
+    reuse neither `du` nor `dual_du` (e.g. sparsity tracers), keyed by element type.
   - `warn_on_resize`: controls the resize warning policy.
 
 # Examples
@@ -312,7 +314,12 @@ struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
     dual_du::S
     any_du::Vector{Any}
+    typed_du::Dict{DataType, Any}
     warn_on_resize::Bool
+end
+
+function DiffCache(du::AbstractArray, dual_du::AbstractArray, any_du::Vector{Any}, warn_on_resize::Bool)
+    return DiffCache(du, dual_du, any_du, Dict{DataType, Any}(), warn_on_resize)
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes; warn_on_resize::Bool = true) where {T}
@@ -711,6 +718,10 @@ function Base.resize!(dc::DiffCache, n::Integer)
     end
     # Always resize the any_du cache
     resize!(dc.any_du, n)
+    # Typed workspaces mirror the shape of `du`, so they follow its resizing
+    for buf in values(dc.typed_du)
+        buf isa AbstractVector && resize!(buf, n)
+    end
     return dc
 end
 
