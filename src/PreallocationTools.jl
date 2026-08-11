@@ -817,10 +817,19 @@ Fill all allocated buffers in the DiffCache with the given value.
 function Base.fill!(dc::DiffCache, val)
     fill!(dc.du, val)
     fill!(dc.dual_du, val)
-    # Typed workspaces are scratch for other element types, which `val` may not
-    # convert to; drop them so they are lazily recreated.
-    empty!(dc.typed_du)
+    _fill_typed!(dc.typed_du, val)
     return dc
+end
+
+# Fill each typed workspace through its own eltype: `convert(T, val)` defines what
+# `val` means for that element type (for a sparsity tracer it is the empty tracer,
+# i.e. "constant with no dependencies"). Incompatible eltypes throw, matching the
+# `fill!(::AbstractArray{T}, val)` contract.
+function _fill_typed!(typed_du::Dict{DataType, Any}, val)
+    for buf in values(typed_du)
+        fill!(buf, val)
+    end
+    return typed_du
 end
 
 """
@@ -831,7 +840,7 @@ Fill all allocated buffers in the FixedSizeDiffCache with the given value.
 function Base.fill!(dc::FixedSizeDiffCache, val)
     fill!(dc.du, val)
     fill!(dc.dual_du, val)
-    empty!(dc.typed_du)
+    _fill_typed!(dc.typed_du, val)
     return dc
 end
 

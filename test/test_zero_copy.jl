@@ -128,7 +128,9 @@ end
         fill!(cache, 0.0)
         @test all(cache.du .== 0)
         @test all(cache.dual_du .== 0)
-        @test isempty(cache.typed_du)
+        # Typed workspaces are filled through their own eltype
+        @test eltype(cache.typed_du[BigFloat]) === BigFloat
+        @test all(cache.typed_du[BigFloat] .== 0)
 
         # Test fill! with other values
         fill!(cache, 5.0)
@@ -149,7 +151,9 @@ end
         fill!(cache, 0.0)
         @test all(cache.du .== 0)
         @test all(cache.dual_du .== 0)
-        @test isempty(cache.typed_du)
+        # Typed workspaces are filled through their own eltype
+        @test eltype(cache.typed_du[BigFloat]) === BigFloat
+        @test all(cache.typed_du[BigFloat] .== 0)
 
         # Test fill! with other values
         fill!(cache, 3.0)
