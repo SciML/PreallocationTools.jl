@@ -31,7 +31,8 @@ workspace must support `resize!` when callers need this operation.
 
   - `du`: primal workspace with the shape and storage type of `u`.
   - `dual_du`: workspace for dual-number evaluations.
-  - `any_du`: reusable temporary storage for nested dual reconstruction.
+  - `typed_du`: lazily allocated persistent workspaces for element types that can
+    reuse neither `du` nor `dual_du`, keyed by element type.
 
 # Examples
 
@@ -43,7 +44,7 @@ workspace = get_tmp(cache, zeros(3))
 struct FixedSizeDiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
     dual_du::S
-    any_du::Vector{Any}
+    typed_du::Dict{DataType, Any}
 end
 
 """
@@ -107,8 +108,7 @@ function FixedSizeDiffCache(
         ::Type{Val{chunk_size}}
     ) where {T, chunk_size}
     x = dualarraycreator(u, siz, Val{chunk_size})
-    xany = Any[]
-    return FixedSizeDiffCache(deepcopy(u), x, xany)
+    return FixedSizeDiffCache(deepcopy(u), x, Dict{DataType, Any}())
 end
 
 """
@@ -254,10 +254,7 @@ function get_tmp(dc::FixedSizeDiffCache, ::Type{T}) where {T <: Number}
     return if promote_type(eltype(dc.du), T) <: eltype(dc.du)
         dc.du
     else
-        if length(dc.du) > length(dc.any_du)
-            resize!(dc.any_du, length(dc.du))
-        end
-        _restructure(dc.du, dc.any_du)
+        _typed_tmp(dc, T)
     end
 end
 
@@ -298,7 +295,6 @@ primal workspace throws `ArgumentError`.
 
   - `du`: primal workspace.
   - `dual_du`: dual-number workspace, enlarged on demand when necessary.
-  - `any_du`: reusable temporary storage for nested dual reconstruction.
   - `typed_du`: lazily allocated persistent workspaces for element types that can
     reuse neither `du` nor `dual_du` (e.g. sparsity tracers), keyed by element type.
   - `warn_on_resize`: controls the resize warning policy.
@@ -313,13 +309,8 @@ workspace = get_tmp(cache, zeros(3))
 struct DiffCache{T <: AbstractArray, S <: AbstractArray}
     du::T
     dual_du::S
-    any_du::Vector{Any}
     typed_du::Dict{DataType, Any}
     warn_on_resize::Bool
-end
-
-function DiffCache(du::AbstractArray, dual_du::AbstractArray, any_du::Vector{Any}, warn_on_resize::Bool)
-    return DiffCache(du, dual_du, any_du, Dict{DataType, Any}(), warn_on_resize)
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes; warn_on_resize::Bool = true) where {T}
@@ -327,8 +318,7 @@ function DiffCache(u::AbstractArray{T}, siz, chunk_sizes; warn_on_resize::Bool =
         _parameterless_type(u),
         _zeroed_or_uninitialized(T, prod(chunk_sizes .+ 1) * prod(siz))
     )
-    xany = Any[]
-    return DiffCache(u, x, xany, warn_on_resize)
+    return DiffCache(u, x, Dict{DataType, Any}(), warn_on_resize)
 end
 
 _parameterless_type(x) = typeof(x).name.wrapper
@@ -378,15 +368,36 @@ Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`
 """
 # ForwardDiff-specific methods moved to extension
 
+# The compiler resolves this to a constant, and `:removable` lets it delete the
+# runtime allocation (same pattern as `_preserved_similar_type` for `LazyBufferCache`).
+Base.@assume_effects :removable function _typed_tmp_type(x::AbstractArray, ::Type{T}) where {T}
+    return typeof(_restructure(x, similar(x, T, length(x))))
+end
+
+# Persistent workspace for element types that can reuse neither `du` nor `dual_du`
+# (sparsity tracers, exotic number types, nested-dual reconstruction). One flat,
+# concretely typed buffer per element type, allocated on first use and shared by
+# every fetch: `get_tmp`'s contract is that repeated fetches from the same cache
+# see the same storage, and callers like `one(eltype(c))` need a concrete eltype —
+# a shared `Vector{Any}` can satisfy only the first requirement. The `get!` lookup
+# is type-asserted like `LazyBufferCache.get_tmp`, since the table is untyped.
+function _typed_tmp(dc, ::Type{T}) where {T}
+    buf = get!(dc.typed_du, T) do
+        similar(dc.du, T, length(dc.du))
+    end
+    if length(buf) != length(dc.du)
+        # `du` was resized behind the cache's back (`Base.resize!` keeps the typed
+        # workspaces in sync). Contents are scratch, so recreate.
+        buf = dc.typed_du[T] = similar(dc.du, T, length(dc.du))
+    end
+    return _restructure(dc.du, buf)::_typed_tmp_type(dc.du, T)
+end
+
 function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
     return if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
         dc.du
     else
-        if length(dc.du) > length(dc.any_du)
-            resize!(dc.any_du, length(dc.du))
-        end
-
-        _restructure(dc.du, dc.any_du)
+        _typed_tmp(dc, eltype(u))
     end
 end
 
@@ -394,11 +405,7 @@ function get_tmp(dc::DiffCache, ::Type{T}) where {T <: Number}
     return if promote_type(eltype(dc.du), T) <: eltype(dc.du)
         dc.du
     else
-        if length(dc.du) > length(dc.any_du)
-            resize!(dc.any_du, length(dc.du))
-        end
-
-        _restructure(dc.du, dc.any_du)
+        _typed_tmp(dc, T)
     end
 end
 
@@ -416,7 +423,7 @@ the requested automatic differentiation element type.
 """
 function Base.reshape(dc::DiffCache, dims::Tuple{Vararg{Integer}})
     shape = map(Int, dims)
-    return DiffCache(_resizeable_reshape(dc.du, shape), dc.dual_du, dc.any_du, dc.warn_on_resize)
+    return DiffCache(_resizeable_reshape(dc.du, shape), dc.dual_du, dc.typed_du, dc.warn_on_resize)
 end
 
 Base.reshape(dc::DiffCache, dims::Integer...) = reshape(dc, dims)
@@ -716,13 +723,22 @@ function Base.resize!(dc::DiffCache, n::Integer)
     if dc.dual_du isa AbstractVector
         resize!(dc.dual_du, dual_length)
     end
-    # Always resize the any_du cache
-    resize!(dc.any_du, n)
-    # Typed workspaces mirror the shape of `du`, so they follow its resizing
-    for buf in values(dc.typed_du)
-        buf isa AbstractVector && resize!(buf, n)
-    end
+    # Typed workspaces mirror the length of `du`, so they follow its resizing;
+    # non-resizable buffers are dropped and lazily recreated at the next fetch.
+    _resize_typed!(dc.typed_du, n)
     return dc
+end
+
+function _resize_typed!(typed_du::Dict{DataType, Any}, n::Integer)
+    for k in collect(keys(typed_du))
+        buf = typed_du[k]
+        if buf isa Vector
+            resize!(buf, n)
+        else
+            delete!(typed_du, k)
+        end
+    end
+    return typed_du
 end
 
 function Base.resize!(dc::FixedSizeDiffCache, n::Integer)
@@ -738,18 +754,17 @@ function Base.resize!(dc::FixedSizeDiffCache, n::Integer)
     if dc.dual_du isa AbstractVector
         resize!(dc.dual_du, n)
     end
-    # Always resize the any_du cache
-    resize!(dc.any_du, n)
+    _resize_typed!(dc.typed_du, n)
     return dc
 end
 
 # zero dispatches for PreallocationTools types
 function Base.zero(dc::DiffCache)
-    return DiffCache(zero(dc.du), zero(dc.dual_du), Any[], dc.warn_on_resize)
+    return DiffCache(zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}(), dc.warn_on_resize)
 end
 
 function Base.zero(dc::FixedSizeDiffCache)
-    return FixedSizeDiffCache(zero(dc.du), zero(dc.dual_du), Any[])
+    return FixedSizeDiffCache(zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}())
 end
 
 function Base.zero(lbc::LazyBufferCache)
@@ -762,11 +777,17 @@ end
 
 # copy dispatches for PreallocationTools types
 function Base.copy(dc::DiffCache)
-    return DiffCache(copy(dc.du), copy(dc.dual_du), copy(dc.any_du), dc.warn_on_resize)
+    return DiffCache(
+        copy(dc.du), copy(dc.dual_du),
+        Dict{DataType, Any}(k => copy(v) for (k, v) in dc.typed_du), dc.warn_on_resize
+    )
 end
 
 function Base.copy(dc::FixedSizeDiffCache)
-    return FixedSizeDiffCache(copy(dc.du), copy(dc.dual_du), copy(dc.any_du))
+    return FixedSizeDiffCache(
+        copy(dc.du), copy(dc.dual_du),
+        Dict{DataType, Any}(k => copy(v) for (k, v) in dc.typed_du)
+    )
 end
 
 function Base.copy(lbc::LazyBufferCache)
@@ -796,7 +817,9 @@ Fill all allocated buffers in the DiffCache with the given value.
 function Base.fill!(dc::DiffCache, val)
     fill!(dc.du, val)
     fill!(dc.dual_du, val)
-    fill!(dc.any_du, nothing)
+    # Typed workspaces are scratch for other element types, which `val` may not
+    # convert to; drop them so they are lazily recreated.
+    empty!(dc.typed_du)
     return dc
 end
 
@@ -808,7 +831,7 @@ Fill all allocated buffers in the FixedSizeDiffCache with the given value.
 function Base.fill!(dc::FixedSizeDiffCache, val)
     fill!(dc.du, val)
     fill!(dc.dual_du, val)
-    fill!(dc.any_du, nothing)
+    empty!(dc.typed_du)
     return dc
 end
 

@@ -13,13 +13,11 @@ SciMLPublic = "431bcebd-1456-4ced-9d72-93c2757fff0b"
 EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
-SparseConnectivityTracer = "9f842d2f-2579-4b1d-911e-f412cf18a3f5"
 
 [extensions]
 PreallocationToolsEnzymeCoreExt = "EnzymeCore"
 PreallocationToolsForwardDiffExt = "ForwardDiff"
 PreallocationToolsReverseDiffExt = "ReverseDiff"
-PreallocationToolsSparseConnectivityTracerExt = "SparseConnectivityTracer"
 
 [compat]
 ADTypes = "1.16"

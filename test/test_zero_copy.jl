@@ -10,14 +10,14 @@ using Test, PreallocationTools, ForwardDiff
         @test isa(zero_cache, DiffCache)
         @test all(zero_cache.du .== 0)
         @test all(zero_cache.dual_du .== 0)
-        @test isempty(zero_cache.any_du)
+        @test isempty(zero_cache.typed_du)
 
         # Test copy
         copy_cache = copy(cache)
         @test isa(copy_cache, DiffCache)
         @test copy_cache.du == cache.du
         @test copy_cache.dual_du == cache.dual_du
-        @test copy_cache.any_du == cache.any_du
+        @test copy_cache.typed_du == cache.typed_du
         # Ensure it's a copy, not a reference
         copy_cache.du[1] = -999
         @test cache.du[1] != -999
@@ -32,14 +32,14 @@ using Test, PreallocationTools, ForwardDiff
         @test isa(zero_cache, FixedSizeDiffCache)
         @test all(zero_cache.du .== 0)
         @test all(zero_cache.dual_du .== 0)
-        @test isempty(zero_cache.any_du)
+        @test isempty(zero_cache.typed_du)
 
         # Test copy
         copy_cache = copy(cache)
         @test isa(copy_cache, FixedSizeDiffCache)
         @test copy_cache.du == cache.du
         @test copy_cache.dual_du == cache.dual_du
-        @test copy_cache.any_du == cache.any_du
+        @test copy_cache.typed_du == cache.typed_du
         # Ensure it's a copy, not a reference
         copy_cache.du[1] = -999
         @test cache.du[1] != -999
@@ -122,13 +122,13 @@ end
         # Fill with non-zero values initially
         fill!(cache.du, 1.0)
         fill!(cache.dual_du, 2.0)
-        push!(cache.any_du, 3.0)
+        cache.typed_du[BigFloat] = similar(cache.du, BigFloat, length(cache.du))
 
         # Test fill! with 0
         fill!(cache, 0.0)
         @test all(cache.du .== 0)
         @test all(cache.dual_du .== 0)
-        @test all(cache.any_du .=== nothing)
+        @test isempty(cache.typed_du)
 
         # Test fill! with other values
         fill!(cache, 5.0)
@@ -143,13 +143,13 @@ end
         # Fill with non-zero values initially
         fill!(cache.du, 1.0)
         fill!(cache.dual_du, 2.0)
-        push!(cache.any_du, 3.0)
+        cache.typed_du[BigFloat] = similar(cache.du, BigFloat, length(cache.du))
 
         # Test fill! with 0
         fill!(cache, 0.0)
         @test all(cache.du .== 0)
         @test all(cache.dual_du .== 0)
-        @test all(cache.any_du .=== nothing)
+        @test isempty(cache.typed_du)
 
         # Test fill! with other values
         fill!(cache, 3.0)
