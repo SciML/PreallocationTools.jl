@@ -56,10 +56,10 @@ shadowkey(b::LazyBufferCache) = b.bufs
 # Julia <= 1.11 (sret+returnroots CallingConventionMismatchError); inlined
 # into `constshadow` no such function exists in the module.
 @inline makeshadow(dc::DiffCache) = DiffCache(
-    zero(dc.du), zero(dc.dual_du), Any[], false
+    zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}(), false
 )
 @inline makeshadow(dc::FixedSizeDiffCache) = FixedSizeDiffCache(
-    zero(dc.du), zero(dc.dual_du), Any[]
+    zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}()
 )
 zeroinit!(buf) = fill!(buf, zero(eltype(buf)))
 @inline makeshadow(b::LazyBufferCache) = LazyBufferCache(
