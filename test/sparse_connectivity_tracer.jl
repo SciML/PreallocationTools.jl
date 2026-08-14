@@ -2,6 +2,18 @@ module TestSparseConnectivityTracer
 
 using PreallocationTools, SparseConnectivityTracer, ForwardDiff, SparseArrays, Test
 
+@testset "BigFloat cache" begin
+    T = jacobian_eltype(BigFloat[1], TracerLocalSparsityDetector())
+    input = Vector{T}(undef, 1)
+
+    for cache in (DiffCache(BigFloat[1]), FixedSizeDiffCache(BigFloat[1], 1))
+        type_workspace = @inferred get_tmp(cache, T)
+        array_workspace = @inferred get_tmp(cache, input)
+        @test eltype(type_workspace) === T
+        @test Base.mightalias(type_workspace, array_workspace)
+    end
+end
+
 function f1(u, cache)
     c = get_tmp(cache, u)
     # This will throw if a fallback definition is used
