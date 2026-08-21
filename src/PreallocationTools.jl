@@ -6,7 +6,10 @@ using PrecompileTools: @compile_workload, @setup_workload
 using SciMLPublic: @public
 
 """
-    FixedSizeDiffCache(u::AbstractArray, N = Val{forwarddiff_compat_chunk_size(length(u))})
+    FixedSizeDiffCache(
+        u::AbstractArray,
+        ::Type{Val{N}} = Val{forwarddiff_compat_chunk_size(length(u))}
+    ) where {N}
     FixedSizeDiffCache(u::AbstractArray, N::Integer)
 
 Build a fixed-size cache with storage for both the element type of `u` and the
@@ -29,9 +32,10 @@ workspace must support `resize!` when callers need this operation.
 
 # Fields
 
-  - `du`: primal workspace with the shape and storage type of `u`.
-  - `dual_du`: workspace for dual-number evaluations.
-  - `typed_du`: lazily allocated persistent workspaces for element types that can
+  - `du::T`: primal workspace with the shape and storage type of `u`.
+  - `dual_du::S`: workspace for dual-number evaluations.
+  - `typed_du::Dict{DataType, Any}`: lazily allocated persistent workspaces for
+    element types that can
     reuse neither `du` nor `dual_du`, keyed by element type.
 
 # Examples
@@ -78,7 +82,7 @@ unrelated package.
     nonnegative integer dimensions supplied by the constructor.
   - `N`: nonnegative AD chunk size encoded by `Val`.
 
-# Return
+# Returns
 
 Return a newly allocated `AbstractArray` with dimensions `size`, whose element
 type can represent the extension's AD values with chunk size `N`. The result
@@ -129,7 +133,7 @@ need a different chunk size should pass `N` explicitly to the constructor.
 
   - `n`: number of primal elements in the requested cache. It is nonnegative.
 
-# Return
+# Returns
 
 Return a nonnegative `Int` accepted by the backend. The fallback returns `0`,
 which represents no preallocated dual partials.
@@ -177,7 +181,7 @@ be reused for a requested scalar type.
 
   - `T`: a scalar type. `T` may encode an AD chunk size in its type parameters.
 
-# Return
+# Returns
 
 Return the nonnegative `Int` chunk size encoded by `T`. Return `0` when `T`
 does not encode chunk-size information; this is the fallback behavior.
@@ -208,22 +212,24 @@ For `DiffCache` and `FixedSizeDiffCache`, this returns normal storage when `u`
 has the cached primal element type and dual-compatible storage when `u` carries
 automatic differentiation element types. For `LazyBufferCache` and
 `GeneralLazyBufferCache`, this lazily creates and reuses storage keyed by the
-type and size requested.
+type and size requested. For the generic fallback, it returns `cache` unchanged.
 
 # Arguments
 
-  - `cache`: a cache created by this package, or another object for which the
-    generic fallback should return `cache` itself.
-  - `u`: a value, array, or scalar type describing the element type and, for
-    lazy buffers, the requested shape.
+  - `cache`: a cache created by this package, or another object handled by the
+    generic fallback.
+  - `u`: for `DiffCache` and `FixedSizeDiffCache`, a number, array, or scalar
+    type describing the requested element type; for `LazyBufferCache`, an array
+    prototype; for `GeneralLazyBufferCache`, the value used to construct storage.
   - `size`: optional lazy-buffer shape; it is accepted only by
     `LazyBufferCache`.
 
-# Return
+# Returns
 
-The returned workspace is owned by `cache` and is reused by later matching
-lookups. Callers must fully overwrite scratch storage before reading it and
-must not retain it across calls that can request the same cache entry.
+For a cache type, return storage owned by `cache` and reused by later matching
+lookups. For the generic fallback, return `cache` itself. Callers must fully
+overwrite scratch storage before reading it and must not retain it across calls
+that can request the same cache entry.
 
 # Developer Interface
 
@@ -261,7 +267,11 @@ end
 # DiffCache
 
 """
-    DiffCache(u::AbstractArray, N::Int = forwarddiff_compat_chunk_size(length(u)); levels::Int = 1, warn_on_resize::Bool = true)
+    DiffCache(
+        u::AbstractArray,
+        N::Int = forwarddiff_compat_chunk_size(length(u));
+        levels::Int = 1, warn_on_resize::Bool = true
+    )
     DiffCache(u::AbstractArray, N::AbstractArray{<:Int}; warn_on_resize::Bool = true)
 
 Build a cache with storage for both the element type of `u` and the
@@ -286,16 +296,17 @@ primal workspace throws `ArgumentError`.
   - `u`: prototype array whose primal storage is cached.
   - `N`: ForwardDiff chunk size, or one chunk size per nested AD level.
 
-# Keyword Arguments
+# Keywords
 
   - `levels`: number of nested forward-mode AD levels when `N` is scalar.
   - `warn_on_resize`: whether to emit a one-time warning if dual storage grows.
 
 # Fields
 
-  - `du`: primal workspace.
-  - `dual_du`: dual-number workspace, enlarged on demand when necessary.
-  - `typed_du`: lazily allocated persistent workspaces for element types that can
+  - `du::T`: primal workspace.
+  - `dual_du::S`: dual-number workspace, enlarged on demand when necessary.
+  - `typed_du::Dict{DataType, Any}`: lazily allocated persistent workspaces for
+    element types that can
     reuse neither `du` nor `dual_du` (e.g. sparsity tracers), keyed by element type.
   - `warn_on_resize`: controls the resize warning policy.
 
@@ -350,11 +361,15 @@ Use `DiffCache` in new code.
 
   - `args`: positional arguments accepted by [`DiffCache`](@ref).
 
-# Keyword Arguments
+# Keywords
 
   - `warn_on_resize`: forwarded to [`DiffCache`](@ref); controls whether an
     undersized dual workspace emits its one-time resize warning.
   - `kwargs`: additional keywords accepted by [`DiffCache`](@ref).
+
+# Returns
+
+Return the [`DiffCache`](@ref) constructed from the forwarded arguments.
 """
 function dualcache(args...; warn_on_resize::Bool = true, kwargs...)
     Base.depwarn("`dualcache` is deprecated, use `DiffCache` instead.", :dualcache)
@@ -453,7 +468,7 @@ ordinary arrays and `ArrayInterface.restructure` for custom representations.
   - `duals`: AD storage containing at least `length(normal_cache)` logical
     values in linear-index order.
 
-# Return
+# Returns
 
 Return an `AbstractArray` with `axes(result) == axes(normal_cache)`. Its values
 must correspond to `duals` in linear-index order, and mutations through the
@@ -508,7 +523,7 @@ directly, because this helper applies the cache's warning policy.
   - `nelem`: required number of elements in `dc.dual_du`. It must be at least
     the current capacity and nonnegative.
 
-# Return
+# Returns
 
 Return the resized `dc.dual_du` workspace. The returned storage remains owned
 by `dc`; callers must use [`_restructure`](@ref) before exposing it with the
@@ -540,7 +555,7 @@ end
 # LazyBufferCache
 
 """
-    b = LazyBufferCache(f = identity; initializer! = identity)
+    LazyBufferCache(f = identity; initializer! = identity)
 
 A lazily allocated buffer cache. Given an array `u`, `b[u]` or `get_tmp(b, u)`
 returns an array with a shape chosen from `size(u)`. The cache allocates that
@@ -552,7 +567,7 @@ lookups.
   - `f`: maps `size(u)` to the requested buffer dimensions. The default,
     `identity`, preserves the input shape.
 
-# Keyword Arguments
+# Keywords
 
   - `initializer!`: function applied once to each newly allocated buffer. The
     default leaves the buffer uninitialized; use, for example,
@@ -560,10 +575,11 @@ lookups.
 
 # Fields
 
-  - `bufs`: cache from prototype array type and requested dimensions to a
+  - `bufs::Dict{Any, Any}`: cache from prototype array type and requested dimensions
+    to a
     reusable buffer.
-  - `sizemap`: shape-mapping function supplied as `f`.
-  - `initializer!`: initialization function applied to newly allocated buffers.
+  - `sizemap::F`: shape-mapping function supplied as `f`.
+  - `initializer!::I`: initialization function applied to newly allocated buffers.
 
 Pass an explicit shape as `b[u, s]` or `get_tmp(b, u, s)` to override `f` for
 one cache entry. Scratch buffers are shared for matching keys, so callers must
@@ -637,7 +653,7 @@ end
 # GeneralLazyBufferCache
 
 """
-    b = GeneralLazyBufferCache(f=identity)
+    GeneralLazyBufferCache(f = identity)
 
 A lazily allocated cache keyed by the concrete type of its input. Given `u`,
 `b[u]` or `get_tmp(b, u)` calls `f(u)` on the first lookup for `typeof(u)` and
@@ -650,8 +666,9 @@ returns that same cached object for later lookups of the type.
 
 # Fields
 
-  - `bufs`: map from concrete input type to the reusable object produced by `f`.
-  - `f`: cache-construction function.
+  - `bufs::Dict{Any, Any}`: map from concrete input type to the reusable object
+    produced by `f`.
+  - `f::F`: cache-construction function.
 
 # Limitation
 
@@ -694,7 +711,7 @@ Resize a vector-backed cache to `n` primal elements.
     vector.
   - `n`: nonnegative target length for the primal workspace.
 
-# Return
+# Returns
 
 Return the same cache object. `DiffCache` preserves its current dual-storage
 capacity per primal element; `FixedSizeDiffCache` resizes vector-backed dual
