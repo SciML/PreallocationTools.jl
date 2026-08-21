@@ -210,8 +210,14 @@ function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     return get_tmp(dc, eltype(u))
 end
 
+function _promotes_to_primal(::Type{P}, ::Type{T}) where {P, T}
+    # Query the requested type first so its custom rule can avoid an ambiguous reverse rule.
+    promoted = Base.promote_rule(T, P)
+    return promoted === Union{} ? promote_type(P, T) <: P : promoted <: P
+end
+
 function get_tmp(dc::FixedSizeDiffCache, ::Type{T}) where {T <: Number}
-    return if promote_type(eltype(dc.du), T) <: eltype(dc.du)
+    return if _promotes_to_primal(eltype(dc.du), T)
         dc.du
     else
         _typed_tmp(dc, T)
@@ -367,7 +373,7 @@ function _typed_tmp(dc, ::Type{T}) where {T}
 end
 
 function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
-    return if promote_type(eltype(dc.du), eltype(u)) <: eltype(dc.du)
+    return if _promotes_to_primal(eltype(dc.du), eltype(u))
         dc.du
     else
         _typed_tmp(dc, eltype(u))
@@ -375,7 +381,7 @@ function get_tmp(dc::DiffCache, u::Union{Number, AbstractArray})
 end
 
 function get_tmp(dc::DiffCache, ::Type{T}) where {T <: Number}
-    return if promote_type(eltype(dc.du), T) <: eltype(dc.du)
+    return if _promotes_to_primal(eltype(dc.du), T)
         dc.du
     else
         _typed_tmp(dc, T)
