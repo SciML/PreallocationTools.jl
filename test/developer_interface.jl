@@ -45,6 +45,11 @@ module MockADExtension
 
 end
 
+@testset "Generic get_tmp fallback" begin
+    marker = Ref(1)
+    @test get_tmp(marker, :unused) === marker
+end
+
 @testset "Independent AD extension contract" begin
     prototype = MockADExtension.MockVector([1.0, 2.0, 3.0])
     fixed = FixedSizeDiffCache(prototype, 3)
