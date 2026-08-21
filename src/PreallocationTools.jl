@@ -38,6 +38,10 @@ workspace must support `resize!` when callers need this operation.
     element types that can
     reuse neither `du` nor `dual_du`, keyed by element type.
 
+# Returns
+
+Return a `FixedSizeDiffCache` containing the primal and dual workspaces for `u`.
+
 # Examples
 
 ```julia
@@ -202,56 +206,6 @@ chunksize(::Type{T}) where {T} = 0
 
 # ForwardDiff-specific methods moved to extension
 
-"""
-    get_tmp(cache, u)
-    get_tmp(cache, u, size)
-
-Return cache storage appropriate for `u`.
-
-For `DiffCache` and `FixedSizeDiffCache`, this returns normal storage when `u`
-has the cached primal element type and dual-compatible storage when `u` carries
-automatic differentiation element types. For `LazyBufferCache` and
-`GeneralLazyBufferCache`, this lazily creates and reuses storage keyed by the
-type and size requested. For the generic fallback, it returns `cache` unchanged.
-
-# Arguments
-
-  - `cache`: a cache created by this package, or another object handled by the
-    generic fallback.
-  - `u`: for `DiffCache` and `FixedSizeDiffCache`, a number, array, or scalar
-    type describing the requested element type; for `LazyBufferCache`, an array
-    prototype; for `GeneralLazyBufferCache`, the value used to construct storage.
-  - `size`: optional lazy-buffer shape; it is accepted only by
-    `LazyBufferCache`.
-
-# Returns
-
-For a cache type, return storage owned by `cache` and reused by later matching
-lookups. For the generic fallback, return `cache` itself. Callers must fully
-overwrite scratch storage before reading it and must not retain it across calls
-that can request the same cache entry.
-
-# Developer Interface
-
-An AD extension may specialize `get_tmp` for `DiffCache` or
-`FixedSizeDiffCache` and a scalar type that it owns. The method must return
-scratch storage with the cache's logical axes and an element representation
-compatible with the requested scalar type. It must use only the public cache
-fields and developer hooks documented on the Developer API page, and it must
-not return storage that aliases the primal workspace unless that representation
-explicitly permits it.
-
-# Examples
-
-```jldoctest
-julia> using PreallocationTools
-
-julia> cache = DiffCache(zeros(2), 1);
-
-julia> get_tmp(cache, zeros(2)) === cache.du
-true
-```
-"""
 function get_tmp(dc::FixedSizeDiffCache, u::Union{Number, AbstractArray})
     return get_tmp(dc, eltype(u))
 end
@@ -309,6 +263,10 @@ primal workspace throws `ArgumentError`.
     element types that can
     reuse neither `du` nor `dual_du` (e.g. sparsity tracers), keyed by element type.
   - `warn_on_resize`: controls the resize warning policy.
+
+# Returns
+
+Return a `DiffCache` containing the primal and dual workspaces for `u`.
 
 # Examples
 
@@ -446,7 +404,57 @@ Base.reshape(dc::DiffCache, dims::Integer...) = reshape(dc, dims)
 _resizeable_reshape(a::AbstractVector, shape) = reshape(view(a, :), shape)
 _resizeable_reshape(a::AbstractArray, shape) = reshape(a, shape)
 
-get_tmp(dc, u) = dc
+"""
+    get_tmp(cache, u)
+    get_tmp(cache, u, size)
+
+Return cache storage appropriate for `u`.
+
+For `DiffCache` and `FixedSizeDiffCache`, this returns normal storage when `u`
+has the cached primal element type and dual-compatible storage when `u` carries
+automatic differentiation element types. For `LazyBufferCache` and
+`GeneralLazyBufferCache`, this lazily creates and reuses storage keyed by the
+type and size requested. For the generic fallback, it returns `cache` unchanged.
+
+# Arguments
+
+  - `cache`: a cache created by this package, or another object handled by the
+    generic fallback.
+  - `u`: for `DiffCache` and `FixedSizeDiffCache`, a number, array, or scalar
+    type describing the requested element type; for `LazyBufferCache`, an array
+    prototype; for `GeneralLazyBufferCache`, the value used to construct storage.
+  - `size`: optional lazy-buffer shape; it is accepted only by
+    `LazyBufferCache`.
+
+# Returns
+
+For a cache type, return storage owned by `cache` and reused by later matching
+lookups. For the generic fallback, return `cache` itself. Callers must fully
+overwrite scratch storage before reading it and must not retain it across calls
+that can request the same cache entry.
+
+# Developer Interface
+
+An AD extension may specialize `get_tmp` for `DiffCache` or
+`FixedSizeDiffCache` and a scalar type that it owns. The method must return
+scratch storage with the cache's logical axes and an element representation
+compatible with the requested scalar type. It must use only the public cache
+fields and developer hooks documented on the Developer API page, and it must
+not return storage that aliases the primal workspace unless that representation
+explicitly permits it.
+
+# Examples
+
+```jldoctest
+julia> using PreallocationTools
+
+julia> cache = DiffCache(zeros(2), 1);
+
+julia> get_tmp(cache, zeros(2)) === cache.du
+true
+```
+"""
+get_tmp(cache, u) = cache
 
 """
     _restructure(normal_cache::AbstractArray, duals)
@@ -581,6 +589,10 @@ lookups.
   - `sizemap::F`: shape-mapping function supplied as `f`.
   - `initializer!::I`: initialization function applied to newly allocated buffers.
 
+# Returns
+
+Return a `LazyBufferCache` configured with `f` and `initializer!`.
+
 Pass an explicit shape as `b[u, s]` or `get_tmp(b, u, s)` to override `f` for
 one cache entry. Scratch buffers are shared for matching keys, so callers must
 overwrite them before reading.
@@ -669,6 +681,10 @@ returns that same cached object for later lookups of the type.
   - `bufs::Dict{Any, Any}`: map from concrete input type to the reusable object
     produced by `f`.
   - `f::F`: cache-construction function.
+
+# Returns
+
+Return a `GeneralLazyBufferCache` configured with `f`.
 
 # Limitation
 

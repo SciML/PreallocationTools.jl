@@ -4,6 +4,7 @@ using SciMLTesting
 run_tests(;
     core = () -> begin
         @safetestset "Developer Interface" include("developer_interface.jl")
+        @safetestset "Public API Documentation" include("public_api_docs.jl")
         @safetestset "DiffCache Dispatch" include("core_dispatch.jl")
         @safetestset "DiffCache ODE tests" include("core_odes.jl")
         @safetestset "DiffCache Resizing" include("core_resizing.jl")
