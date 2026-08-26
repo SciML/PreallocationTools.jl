@@ -106,36 +106,36 @@ function diffcache_dual_tmp(dc::PreallocationTools.DiffCache, ::Type{T}) where {
             PreallocationTools._restructure(dc.du, view(reint, 1:length(dc.du)))
         end
     else
-        PreallocationTools._restructure(dc.du, zeros(cache_eltype, size(dc.du)))
+        PreallocationTools._typed_tmp(dc, cache_eltype)
+    end
+end
+
+function fixedsize_dual_tmp(
+        dc::PreallocationTools.FixedSizeDiffCache, ::Type{T}
+    ) where {T <: ForwardDiff.Dual}
+    if !isbitstype(T)
+        return PreallocationTools._typed_tmp(dc, dual_eltype(eltype(dc.du), T))
+    end
+
+    x = reinterpret(T, dc.dual_du)
+    return if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
+        x
+    else
+        @view x[axes(dc.du)...]
     end
 end
 
 # Define get_tmp methods for ForwardDiff.Dual types
 function PreallocationTools.get_tmp(dc::PreallocationTools.FixedSizeDiffCache, u::T) where {T <: ForwardDiff.Dual}
-    x = reinterpret(T, dc.dual_du)
-    return if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
-        x
-    else
-        @view x[axes(dc.du)...]
-    end
+    return fixedsize_dual_tmp(dc, T)
 end
 
 function PreallocationTools.get_tmp(dc::PreallocationTools.FixedSizeDiffCache, u::Type{T}) where {T <: ForwardDiff.Dual}
-    x = reinterpret(T, dc.dual_du)
-    return if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
-        x
-    else
-        @view x[axes(dc.du)...]
-    end
+    return fixedsize_dual_tmp(dc, T)
 end
 
 function PreallocationTools.get_tmp(dc::PreallocationTools.FixedSizeDiffCache, u::AbstractArray{T}) where {T <: ForwardDiff.Dual}
-    x = reinterpret(T, dc.dual_du)
-    return if PreallocationTools.chunksize(T) === PreallocationTools.chunksize(eltype(dc.dual_du))
-        x
-    else
-        @view x[axes(dc.du)...]
-    end
+    return fixedsize_dual_tmp(dc, T)
 end
 
 function PreallocationTools.get_tmp(dc::PreallocationTools.DiffCache, u::T) where {T <: ForwardDiff.Dual}

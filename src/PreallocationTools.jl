@@ -343,6 +343,10 @@ Returns the `Dual` or normal cache array stored in `dc` based on the type of `u`
 
 # The compiler resolves this to a constant, and `:removable` lets it delete the
 # runtime allocation (same pattern as `_preserved_similar_type` for `LazyBufferCache`).
+Base.@assume_effects :removable function _typed_buffer_type(x::AbstractArray, ::Type{T}) where {T}
+    return typeof(similar(x, T, length(x)))
+end
+
 Base.@assume_effects :removable function _typed_tmp_type(x::AbstractArray, ::Type{T}) where {T}
     return typeof(_restructure(x, similar(x, T, length(x))))
 end
@@ -357,7 +361,7 @@ end
 function _typed_tmp(dc, ::Type{T}) where {T}
     buf = get!(dc.typed_du, T) do
         similar(dc.du, T, length(dc.du))
-    end
+    end::_typed_buffer_type(dc.du, T)
     if length(buf) != length(dc.du)
         # `du` was resized behind the cache's back (`Base.resize!` keeps the typed
         # workspaces in sync). Contents are scratch, so recreate.
@@ -495,6 +499,7 @@ PreallocationTools._restructure(cache::MyAD.Array, duals) = MyAD.Array(duals, ax
 ```
 """
 function _restructure(normal_cache::Array, duals)
+    size(normal_cache) == size(duals) && return duals
     return reshape(duals, size(normal_cache)...)
 end
 @public _restructure
