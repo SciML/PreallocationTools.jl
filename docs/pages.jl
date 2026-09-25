@@ -3,5 +3,6 @@
 pages = [
     "Home" => "index.md",
     "API" => "preallocationtools.md",
+    "Developer API" => "developer_api.md",
     "Internals" => "internals.md",
 ]

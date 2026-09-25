@@ -1,6 +1,15 @@
 # API
 
+```@docs
+PreallocationTools.DiffCache
+PreallocationTools.FixedSizeDiffCache
+PreallocationTools.LazyBufferCache
+PreallocationTools.GeneralLazyBufferCache
+PreallocationTools.get_tmp
+PreallocationTools.dualcache
+```
+
 ```@autodocs
 Modules = [PreallocationTools]
-Filter = t -> t != PreallocationTools.enlargediffcache!
+Public = false
 ```

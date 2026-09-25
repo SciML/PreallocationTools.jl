@@ -50,7 +50,9 @@ shadowkey(b::LazyBufferCache) = b.bufs
 
 # `warn_on_resize = false`: the primal cache already warns if it is enlarged;
 # a second warning from the hidden shadow cache would be confusing.
-makeshadow(dc::DiffCache) = DiffCache(zero(dc.du), zero(dc.dual_du), Any[], false)
+makeshadow(dc::DiffCache) = DiffCache(
+    zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}(), false
+)
 makeshadow(dc::FixedSizeDiffCache) = zero(dc)
 zeroinit!(buf) = fill!(buf, zero(eltype(buf)))
 makeshadow(b::LazyBufferCache) = LazyBufferCache(b.sizemap; initializer! = zeroinit!)

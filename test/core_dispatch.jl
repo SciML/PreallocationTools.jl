@@ -33,6 +33,15 @@ end
 
 Base.zero(::Type{IsbitsPair{T}}) where {T} = IsbitsPair(zero(T), zero(T))
 
+struct NonBitsReal <: Real
+    value::BigInt
+end
+
+NonBitsReal(x::Integer) = NonBitsReal(big(x))
+
+allocated_get_tmp(cache, input) = @allocated get_tmp(cache, input)
+allocated_get_tmp(cache, ::Type{T}) where {T} = @allocated get_tmp(cache, T)
+
 @testset "DiffCache accepts isbits elements without zero" begin
     u = [(; a = 1.0, b = (2.0, 3.0)), (; a = 4.0, b = (5.0, 6.0))]
     cache = DiffCache(u, 3)
@@ -47,6 +56,26 @@ Base.zero(::Type{IsbitsPair{T}}) where {T} = IsbitsPair(zero(T), zero(T))
 
     tmp[1] = (; a = zero(DualT), b = (zero(DualT), zero(DualT)))
     @test tmp[1] == (; a = zero(DualT), b = (zero(DualT), zero(DualT)))
+end
+
+@testset "non-isbits ForwardDiff workspaces" begin
+    DualT = ForwardDiff.Dual{Nothing, NonBitsReal, 2}
+    dual = DualT(
+        NonBitsReal(1),
+        ForwardDiff.Partials((NonBitsReal(1), NonBitsReal(0)))
+    )
+    duals = fill(dual, 3)
+
+    for cache in (DiffCache(zeros(3), 2), FixedSizeDiffCache(zeros(3), 2))
+        for input in (dual, DualT, duals)
+            workspace = get_tmp(cache, input)
+            workspace .= duals
+            @test eltype(workspace) === DualT
+            @test get_tmp(cache, input) == duals
+            allocated_get_tmp(cache, input)
+            @test allocated_get_tmp(cache, input) == 0
+        end
+    end
 end
 
 #Setup Base Array tests

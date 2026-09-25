@@ -61,7 +61,7 @@ analyticalsolution = [3.0 0; 0 0]
 
     # Initial size
     @test length(dc.du) == 10
-    @test length(dc.any_du) == 0  # Initially empty
+    @test isempty(dc.typed_du)  # Initially empty
 
     # Resize to larger
     resize!(dc, 20)
@@ -218,7 +218,7 @@ end
 
     # Initial size
     @test length(dc.du) == 10
-    @test length(dc.any_du) == 0  # Initially empty
+    @test isempty(dc.typed_du)  # Initially empty
 
     # Resize to larger
     resize!(dc, 20)
