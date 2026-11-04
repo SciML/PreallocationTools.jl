@@ -154,12 +154,7 @@ end
     @test d2_enz ≈ d2_fd
 end
 
-# On Julia 1.12+ Enzyme cannot compile nested differentiation through these
-# custom rules: EnzymeAD/Enzyme.jl#3315 (AssertionError: roots_activep
-# (DFT_CONSTANT) != activep (DFT_DUP_ARG) in enzyme_custom_setup_args). Not a
-# silent-failure gate — the compilation itself errors; remove once fixed
-# upstream.
-VERSION < v"1.12" && @testset "Second order: Enzyme over Enzyme" begin
+@testset "Second order: Enzyme over Enzyme" begin
     stod = DiffCache(similar(randmat))
     loss(τ, cache) = sum(abs2, claytonsample!(cache, τ, 0.0))
     d2_fd = ForwardDiff.derivative(
