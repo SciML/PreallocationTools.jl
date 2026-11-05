@@ -5,21 +5,15 @@ using Test
 using PreallocationTools
 using ForwardDiff
 
-# The `Dual`/scalar `get_tmp` paths return small wrapper objects (ReinterpretArray,
-# SubArray, ReshapedArray) or box scalars. On Julia 1.10 and 1.11 the optimizer
-# heap-allocates these O(1), constant-size wrappers (16-176 bytes, no data copies)
-# even when the result is discarded; Julia 1.12's improved escape analysis elides
-# them. The wrappers are the return value of the API, so the allocation cannot be
-# avoided in package code on the older versions.
-macro test_alloc(expr)
-    return quote
-        if VERSION >= v"1.12"
-            @test $(esc(expr)) == 0
-        else
-            @test_broken $(esc(expr)) == 0
-        end
-    end
-end
+# Measure `get_tmp` inside a function. The "Zero Allocation Tests" testset below is
+# a single top-level expression that contains function definitions: the anonymous
+# functions passed to `LazyBufferCache` and `GeneralLazyBufferCache`. Julia runs
+# such an expression without type inference, so each call in it is dispatched at
+# runtime, which boxes scalar arguments and small immutable results (`Dual`s,
+# array wrappers). Written directly in the testset, `@allocated` would count those
+# boxes on Julia < 1.12. Julia 1.12+ lowers `@allocated f(args...)` to the function
+# call `Base.allocated(f, args...)`, which avoids this the same way.
+alloc_get_tmp(cache, x) = @allocated get_tmp(cache, x)
 
 @testset "Zero Allocation Tests" begin
     # Setup test data
@@ -41,9 +35,9 @@ end
 
         # Test zero allocations
         @test (@allocated get_tmp(cache, u_vec)) == 0
-        @test_alloc (@allocated get_tmp(cache, dual_vec))
-        @test_alloc (@allocated get_tmp(cache, first(u_vec)))
-        @test_alloc (@allocated get_tmp(cache, first(dual_vec)))
+        @test alloc_get_tmp(cache, dual_vec) == 0
+        @test alloc_get_tmp(cache, first(u_vec)) == 0
+        @test alloc_get_tmp(cache, first(dual_vec)) == 0
     end
 
     @testset "DiffCache - Matrix" begin
@@ -55,7 +49,7 @@ end
 
         # Test zero allocations
         @test (@allocated get_tmp(cache, u_mat)) == 0
-        @test_alloc (@allocated get_tmp(cache, dual_mat))
+        @test alloc_get_tmp(cache, dual_mat) == 0
     end
 
     @testset "FixedSizeDiffCache - Vector" begin
@@ -70,8 +64,8 @@ end
         # Test zero allocations
         @test (@allocated get_tmp(cache, u_vec)) == 0
         @test (@allocated get_tmp(cache, dual_vec)) == 0
-        @test_alloc (@allocated get_tmp(cache, first(u_vec)))
-        @test_alloc (@allocated get_tmp(cache, first(dual_vec)))
+        @test alloc_get_tmp(cache, first(u_vec)) == 0
+        @test alloc_get_tmp(cache, first(dual_vec)) == 0
     end
 
     @testset "FixedSizeDiffCache - Matrix" begin
