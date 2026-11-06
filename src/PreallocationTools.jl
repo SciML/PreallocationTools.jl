@@ -19,10 +19,19 @@ Use `get_tmp(cache, u)` to retrieve the cache matching the element type of `u`.
 `FixedSizeDiffCache` is most useful when the dual chunk size is known in
 advance and the cache size does not need to grow during differentiation.
 
+For sparse prototypes, including views, reshapes, and transposes of sparse
+arrays, `dual_du` is empty and the chunk size is not used. The workspace for
+each dual type is a sparse array allocated on the first `get_tmp` call for that
+type, so the memory scales with the number of stored entries. For
+`SparseMatrixCSC` and `SparseVector` prototypes, it has the stored pattern that
+the primal workspace `du` has at that call; entries stored in `du` later are
+not added to it.
+
 For vector-backed caches, `resize!(cache, n)` resizes the primal, dual, and
-nested-dual scratch storage and returns `cache`. Resizing a cache with a
-non-vector primal workspace throws `ArgumentError`; an extension-provided dual
-workspace must support `resize!` when callers need this operation.
+nested-dual scratch storage and returns `cache`. Resizing a cache whose primal
+workspace is not a resizable vector (e.g. a matrix or a sparse vector) throws
+`ArgumentError`; an extension-provided dual workspace must support `resize!`
+when callers need this operation.
 
 # Arguments
 
@@ -33,7 +42,8 @@ workspace must support `resize!` when callers need this operation.
 # Fields
 
   - `du::T`: primal workspace with the shape and storage type of `u`.
-  - `dual_du::S`: workspace for dual-number evaluations.
+  - `dual_du::S`: workspace for dual-number evaluations; empty for sparse
+    prototypes.
   - `typed_du::Dict{DataType, Any}`: lazily allocated persistent workspaces for
     element types that can
     reuse neither `du` nor `dual_du`, keyed by element type.
@@ -115,7 +125,11 @@ function FixedSizeDiffCache(
         u::AbstractArray{T}, siz,
         ::Type{Val{chunk_size}}
     ) where {T, chunk_size}
-    x = dualarraycreator(u, siz, Val{chunk_size})
+    x = if _flat_dual_storage(u)
+        dualarraycreator(u, siz, Val{chunk_size})
+    else
+        _zeroed_or_uninitialized(T, 0)
+    end
     return FixedSizeDiffCache(deepcopy(u), x, Dict{DataType, Any}())
 end
 
@@ -246,10 +260,18 @@ algorithms are expected to resize the cache.
 `DiffCache` also supports sparsity detection via
 [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl/).
 
+For sparse prototypes, including views, reshapes, and transposes of sparse
+arrays, `dual_du` is empty and the workspaces for other element types are
+sparse arrays allocated on first use, so the memory scales with the number of
+stored entries. For `SparseMatrixCSC` and `SparseVector` prototypes, each has
+the stored pattern that the primal workspace `du` has when that workspace is
+allocated; entries stored in `du` later are not added to it.
+
 For vector-backed caches, `resize!(cache, n)` resizes the primal and
 nested-dual scratch storage while preserving the current dual-storage capacity
-per primal element, then returns `cache`. Resizing a cache with a non-vector
-primal workspace throws `ArgumentError`.
+per primal element, then returns `cache`. Resizing a cache whose primal
+workspace is not a resizable vector (e.g. a matrix or a sparse vector) throws
+`ArgumentError`.
 
 # Arguments
 
@@ -264,7 +286,8 @@ primal workspace throws `ArgumentError`.
 # Fields
 
   - `du::T`: primal workspace.
-  - `dual_du::S`: dual-number workspace, enlarged on demand when necessary.
+  - `dual_du::S`: dual-number workspace, enlarged on demand when necessary;
+    empty for sparse prototypes.
   - `typed_du::Dict{DataType, Any}`: lazily allocated persistent workspaces for
     element types that can
     reuse neither `du` nor `dual_du` (e.g. sparsity tracers), keyed by element type.
@@ -289,14 +312,33 @@ struct DiffCache{T <: AbstractArray, S <: AbstractArray}
 end
 
 function DiffCache(u::AbstractArray{T}, siz, chunk_sizes; warn_on_resize::Bool = true) where {T}
-    x = adapt(
-        _parameterless_type(u),
-        _zeroed_or_uninitialized(T, prod(chunk_sizes .+ 1) * prod(siz))
-    )
+    n = _flat_dual_storage(u) ? prod(chunk_sizes .+ 1) * prod(siz) : 0
+    x = adapt(_parameterless_type(u), _zeroed_or_uninitialized(T, n))
     return DiffCache(u, x, Dict{DataType, Any}(), warn_on_resize)
 end
 
 _parameterless_type(x) = typeof(x).name.wrapper
+
+# Whether workspaces for other element types can be flat buffers given the shape
+# of `u` by `_restructure`. Sparse arrays cannot wrap such a buffer (they store
+# their values in a `Vector`), so sparse-backed arrays get persistent workspaces
+# of their own shape from `_shaped_typed_tmp`, and their `dual_du` stays empty.
+_flat_dual_storage(u) = !_sparse_backed(typeof(u))
+
+# Whether `A` or one of its parents (views, reshapes, transposes) is a sparse
+# array. The SparseArrays extension adds the method that returns `true`.
+function _sparse_backed(::Type{A}) where {A}
+    P = ArrayInterface.parent_type(A)
+    return P !== A && _sparse_backed(P)
+end
+
+# Provided by the SparseArrays extension; called only for sparse-backed arrays.
+function _shaped_typed_tmp end
+function _fill_stored! end
+
+# Primal workspace of `zero(cache)`; representations whose `zero` drops their
+# structure (sparse arrays drop their stored pattern) specialize it.
+_zero_primal(du) = zero(du)
 
 function _zeroed_or_uninitialized(::Type{T}, dims...) where {T}
     return hasmethod(zero, Tuple{Type{T}}) ? zeros(T, dims...) : Array{T}(undef, dims...)
@@ -365,6 +407,7 @@ end
 # a shared `Vector{Any}` can satisfy only the first requirement. The `get!` lookup
 # is type-asserted like `LazyBufferCache.get_tmp`, since the table is untyped.
 function _typed_tmp(dc, ::Type{T}) where {T}
+    _flat_dual_storage(dc.du) || return _shaped_typed_tmp(dc, T)
     buf = get!(dc.typed_du, T) do
         similar(dc.du, T, length(dc.du))
     end::_typed_buffer_type(dc.du, T)
@@ -403,10 +446,15 @@ backing `DiffCache` with `resize!`, then call `reshape` again with the updated
 dimensions. The returned cache shares the normal cache storage with `dc`; the
 raw dual cache storage remains vector-backed so `get_tmp` can reinterpret it for
 the requested automatic differentiation element type.
+
+For sparse caches, the workspaces for other element types have the shape of the
+cache they belong to, so the returned cache allocates its own.
 """
 function Base.reshape(dc::DiffCache, dims::Tuple{Vararg{Integer}})
     shape = map(Int, dims)
-    return DiffCache(_resizeable_reshape(dc.du, shape), dc.dual_du, dc.typed_du, dc.warn_on_resize)
+    # Flat typed buffers fit any shape of `du`; shaped ones fit only their own.
+    typed_du = _flat_dual_storage(dc.du) ? dc.typed_du : Dict{DataType, Any}()
+    return DiffCache(_resizeable_reshape(dc.du, shape), dc.dual_du, typed_du, dc.warn_on_resize)
 end
 
 Base.reshape(dc::DiffCache, dims::Integer...) = reshape(dc, dims)
@@ -753,16 +801,16 @@ element representation after resizing.
 
 # Failure Behavior
 
-Resizing is unsupported for caches with non-vector primal storage and throws
+Resizing is unsupported for caches whose primal storage is not a vector that
+supports `resize!`, such as matrices or sparse vectors, and throws
 `ArgumentError`.
 """
 function Base.resize!(dc::DiffCache, n::Integer)
-    # Only resize if the array is a vector
-    if dc.du isa AbstractVector
+    if dc.du isa AbstractVector && applicable(resize!, dc.du, n)
         dual_length = length(dc.du) == 0 ? n : cld(length(dc.dual_du), length(dc.du)) * n
         resize!(dc.du, n)
     else
-        throw(ArgumentError("resize! is only supported for DiffCache with vector arrays, got $(typeof(dc.du))"))
+        throw(ArgumentError("resize! is only supported for DiffCache with resizable vector arrays, got $(typeof(dc.du))"))
     end
     if dc.dual_du isa AbstractVector
         resize!(dc.dual_du, dual_length)
@@ -786,11 +834,10 @@ function _resize_typed!(typed_du::Dict{DataType, Any}, n::Integer)
 end
 
 function Base.resize!(dc::FixedSizeDiffCache, n::Integer)
-    # Only resize if the array is a vector
-    if dc.du isa AbstractVector
+    if dc.du isa AbstractVector && applicable(resize!, dc.du, n)
         resize!(dc.du, n)
     else
-        throw(ArgumentError("resize! is only supported for FixedSizeDiffCache with vector arrays, got $(typeof(dc.du))"))
+        throw(ArgumentError("resize! is only supported for FixedSizeDiffCache with resizable vector arrays, got $(typeof(dc.du))"))
     end
     # dual_du is often pre-allocated for ForwardDiff dual numbers,
     # and may need special handling based on chunk size
@@ -804,11 +851,11 @@ end
 
 # zero dispatches for PreallocationTools types
 function Base.zero(dc::DiffCache)
-    return DiffCache(zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}(), dc.warn_on_resize)
+    return DiffCache(_zero_primal(dc.du), zero(dc.dual_du), Dict{DataType, Any}(), dc.warn_on_resize)
 end
 
 function Base.zero(dc::FixedSizeDiffCache)
-    return FixedSizeDiffCache(zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}())
+    return FixedSizeDiffCache(_zero_primal(dc.du), zero(dc.dual_du), Dict{DataType, Any}())
 end
 
 function Base.zero(lbc::LazyBufferCache)
@@ -857,6 +904,9 @@ end
     fill!(dc::DiffCache, val)
 
 Fill all allocated buffers in the DiffCache with the given value.
+
+As for any sparse array, filling a sparse workspace with a nonzero value stores
+every entry.
 """
 function Base.fill!(dc::DiffCache, val)
     fill!(dc.du, val)
@@ -871,15 +921,30 @@ end
 # `fill!(::AbstractArray{T}, val)` contract.
 function _fill_typed!(typed_du::Dict{DataType, Any}, val)
     for buf in values(typed_du)
-        fill!(buf, val)
+        _fill_workspace!(buf, val)
     end
     return typed_du
+end
+
+# Filling a sparse array with zero keeps its stored pattern. Sparse workspaces
+# test `val` rather than their own element type for zero, because `fill!` on a
+# sparse array calls `iszero` on its element type, which for sparsity tracers
+# does not return a `Bool`.
+function _fill_workspace!(buf, val)
+    return if _sparse_backed(typeof(buf)) && iszero(val)
+        _fill_stored!(buf, val)
+    else
+        fill!(buf, val)
+    end
 end
 
 """
     fill!(dc::FixedSizeDiffCache, val)
 
 Fill all allocated buffers in the FixedSizeDiffCache with the given value.
+
+As for any sparse array, filling a sparse workspace with a nonzero value stores
+every entry.
 """
 function Base.fill!(dc::FixedSizeDiffCache, val)
     fill!(dc.du, val)

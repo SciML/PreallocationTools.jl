@@ -1,6 +1,7 @@
 using Enzyme
 using PreallocationTools
 using ForwardDiff
+using SparseArrays
 using Test
 
 const randmat = rand(5, 3)
@@ -318,4 +319,37 @@ end
         )
     )
     @test d2 ≈ sum(2 .* u)
+end
+
+# Writes only stored entries of the bidiagonal pattern below.
+function sparsefun(u, cache)
+    P = get_tmp(cache, u)
+    for i in firstindex(u):(lastindex(u) - 1)
+        P[i + 1, i] = u[i]^2
+    end
+    return sum(nonzeros(P))
+end
+
+@testset "Sparse prototype, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    n = 4
+    proto = spdiagm(-1 => ones(n - 1), 0 => zeros(n))
+    cache = make_cache(proto)
+    u = rand(n)
+    expected = [2 .* u[1:(n - 1)]; 0.0]
+
+    d = only(Enzyme.autodiff(Forward, sparsefun, Duplicated(u, ones(n)), Const(cache)))
+    @test d ≈ sum(expected)
+
+    bu = zeros(n)
+    Enzyme.autodiff(Reverse, sparsefun, Active, Duplicated(u, bu), Const(cache))
+    @test bu ≈ expected
+    @test findnz(cache.du)[1:2] == findnz(proto)[1:2]
+
+    # Enzyme indexes the stored values of the hidden shadow of a `Const` cache
+    # with positions computed from the primal's pattern, so the shadow must have
+    # the same stored pattern.
+    ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
+    @test findnz(ext.makeshadow(cache).du)[1:2] == findnz(proto)[1:2]
 end

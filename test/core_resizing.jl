@@ -231,3 +231,14 @@ end
     # Test that it returns the cache itself
     @test resize!(dc, 8) === dc
 end
+
+# `VectorOfArray` defines `resize!` for its number of inner arrays, not for its
+# number of elements, so the caches must reject it rather than call it.
+@testset "resize! rejects non-vector arrays with their own resize!" begin
+    for (name, make_cache) in (("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache))
+        u = VectorOfArray([zeros(2), zeros(2)])
+        cache = make_cache(u)
+        @test_throws "only supported for $name with resizable vector arrays" resize!(cache, 6)
+        @test size(cache.du) == (2, 2)
+    end
+end
