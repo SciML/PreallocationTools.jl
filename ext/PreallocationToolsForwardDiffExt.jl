@@ -76,7 +76,7 @@ end
 
 function diffcache_dual_tmp(dc::PreallocationTools.DiffCache, ::Type{T}) where {T <: ForwardDiff.Dual}
     cache_eltype = dual_eltype(eltype(dc.du), T)
-    return if isbitstype(cache_eltype)
+    return if isbitstype(cache_eltype) && PreallocationTools._flat_dual_storage(dc.du)
         # Branch on a type-level size condition so it constant-folds per
         # specialization (each call site sees exactly one branch — keeping the
         # common path type-stable and allocation-free, bit-identical to the
@@ -113,7 +113,7 @@ end
 function fixedsize_dual_tmp(
         dc::PreallocationTools.FixedSizeDiffCache, ::Type{T}
     ) where {T <: ForwardDiff.Dual}
-    if !isbitstype(T)
+    if !isbitstype(T) || !PreallocationTools._flat_dual_storage(dc.du)
         return PreallocationTools._typed_tmp(dc, dual_eltype(eltype(dc.du), T))
     end
 
