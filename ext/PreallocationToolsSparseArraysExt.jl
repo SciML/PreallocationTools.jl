@@ -2,7 +2,7 @@ module PreallocationToolsSparseArraysExt
 
 using PreallocationTools: PreallocationTools
 using SparseArrays: AbstractSparseArray, AbstractSparseMatrixCSC, AbstractSparseVector,
-    SparseMatrixCSC, SparseVector, nonzeros
+    SparseMatrixCSC, SparseVector, getcolptr, nonzeroinds, nonzeros, rowvals
 
 const SparseCSC = Union{SparseMatrixCSC, SparseVector}
 
@@ -47,6 +47,37 @@ function PreallocationTools._fill_stored!(buf, x)
     p = parent(buf)
     p === buf ? fill!(buf, x) : PreallocationTools._fill_stored!(p, x)
     return buf
+end
+
+# Gives `dest` the stored pattern and storage lengths of `src`, zeroing the stored
+# values of `dest` if they change and leaving them untouched otherwise. For
+# wrappers, this matches the sparse roots, which must have equal sizes.
+function PreallocationTools._match_stored_pattern!(dest::SparseMatrixCSC, src::SparseMatrixCSC)
+    size(dest) == size(src) ||
+        throw(DimensionMismatch("cannot match the stored pattern of a $(size(src)) sparse matrix in one of size $(size(dest))"))
+    if getcolptr(dest) != getcolptr(src) || rowvals(dest) != rowvals(src) ||
+            length(nonzeros(dest)) != length(nonzeros(src))
+        copyto!(getcolptr(dest), getcolptr(src))
+        copyto!(resize!(rowvals(dest), length(rowvals(src))), rowvals(src))
+        fill!(resize!(nonzeros(dest), length(nonzeros(src))), zero(eltype(dest)))
+    end
+    return dest
+end
+function PreallocationTools._match_stored_pattern!(dest::SparseVector, src::SparseVector)
+    length(dest) == length(src) ||
+        throw(DimensionMismatch("cannot match the stored pattern of a sparse vector of length $(length(src)) in one of length $(length(dest))"))
+    if nonzeroinds(dest) != nonzeroinds(src) || length(nonzeros(dest)) != length(nonzeros(src))
+        copyto!(resize!(nonzeroinds(dest), length(nonzeroinds(src))), nonzeroinds(src))
+        fill!(resize!(nonzeros(dest), length(nonzeros(src))), zero(eltype(dest)))
+    end
+    return dest
+end
+function PreallocationTools._match_stored_pattern!(dest, src)
+    p = parent(dest)
+    p === dest &&
+        throw(ArgumentError("matching the stored pattern of $(typeof(dest)) is not supported"))
+    PreallocationTools._match_stored_pattern!(p, parent(src))
+    return dest
 end
 
 # Stored values from `similar` are uninitialized, and sparse operations read them.

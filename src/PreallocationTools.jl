@@ -335,6 +335,7 @@ end
 # Provided by the SparseArrays extension; called only for sparse-backed arrays.
 function _shaped_typed_tmp end
 function _fill_stored! end
+function _match_stored_pattern! end
 
 # Primal workspace of `zero(cache)`; representations whose `zero` drops their
 # structure (sparse arrays drop their stored pattern) specialize it.

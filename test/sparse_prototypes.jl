@@ -185,3 +185,31 @@ end
         @test lookup_allocs(cache, u) == 0
     end
 end
+
+@testset "Matching stored patterns" begin
+    match! = PreallocationTools._match_stored_pattern!
+    src = sparse([1, 3], [1, 2], [1.0, 2.0], 3, 3)
+
+    dest = sparse([1], [1], [5.0], 3, 3)
+    @test match!(dest, src) === dest
+    @test findnz(dest) == ([1, 3], [1, 2], [0.0, 0.0])
+    # Values are kept while the pattern is unchanged.
+    nonzeros(dest) .= 7
+    match!(dest, src)
+    @test nonzeros(dest) == [7.0, 7.0]
+
+    dest = sparse([1], [1], [5.0], 3, 3)
+    @test parent(match!(transpose(dest), transpose(src))) === dest
+    @test findnz(dest) == ([1, 3], [1, 2], [0.0, 0.0])
+
+    v = sparsevec([2], [5.0], 4)
+    @test match!(v, sparsevec([1, 4], [1.0, 2.0], 4)) === v
+    @test findnz(v) == ([1, 4], [0.0, 0.0])
+
+    @test_throws "cannot match the stored pattern of a (3, 3) sparse matrix in one of size (2, 2)" match!(
+        spzeros(2, 2), src
+    )
+    @test_throws "cannot match the stored pattern of a sparse vector of length 4 in one of length 3" match!(
+        spzeros(3), sparsevec([1], [1.0], 4)
+    )
+end

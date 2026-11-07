@@ -353,3 +353,63 @@ end
     ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
     @test findnz(ext.makeshadow(cache).du)[1:2] == findnz(proto)[1:2]
 end
+
+# Writes every stored value of the workspace, whatever its stored pattern.
+function storedfun(u, cache)
+    P = get_tmp(cache, u)
+    rows, vals = rowvals(P), nonzeros(P)
+    for j in axes(P, 2), k in nzrange(P, j)
+        vals[k] = u[rows[k]]^2
+    end
+    return sum(vals)
+end
+
+storedpattern(A) = findnz(A)[1:2]
+
+@testset "Sparse prototype with a growing stored pattern, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
+    cache = make_cache(sparse([1], [1], [0.0], 3, 3))
+    u = [1.0, 2.0, 3.0]
+
+    d = only(Enzyme.autodiff(Forward, storedfun, Duplicated(u, [1.0, 0, 0]), Const(cache)))
+    @test d ≈ 2
+
+    # Entries stored in the primal workspace between differentiations must be
+    # stored in the hidden shadow as well.
+    cache.du[3, 3] = 1
+    d = only(Enzyme.autodiff(Forward, storedfun, Duplicated(u, [0.0, 0, 1]), Const(cache)))
+    @test d ≈ 6
+    @test storedpattern(ext.constshadow(cache, 1, false).du) == storedpattern(cache.du)
+
+    cache.du[2, 1] = 1
+    bu = zeros(3)
+    Enzyme.autodiff(Reverse, storedfun, Active, Duplicated(u, bu), Const(cache))
+    @test bu ≈ [2, 4, 6]
+    @test storedpattern(ext.constshadow(cache, 1, true).du) == storedpattern(cache.du)
+end
+
+@testset "Sparse dual workspace allocated before the pattern grows, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
+    cache = make_cache(sparse([1], [1], [0.0], 3, 3))
+    w = [1.0, 2.0, 3.0]
+    inner(σ) = storedfun(σ .* w, cache)
+    fdderiv(σ) = ForwardDiff.derivative(inner, σ)
+
+    # Allocates the dual workspace with the stored pattern {(1, 1)}.
+    @test fdderiv(0.5) ≈ w[1]^2
+    cache.du[3, 3] = 1
+    T = only(keys(cache.typed_du))
+
+    d2 = only(
+        Enzyme.autodiff(set_runtime_activity(Forward), Const(fdderiv), Duplicated(0.5, 1.0))
+    )
+    @test d2 ≈ 2 * w[1]^2
+    # The shadow of the dual workspace has the stored pattern of the primal dual
+    # workspace, not that of the grown primal workspace.
+    @test storedpattern(ext.constshadow(cache, 1, false).typed_du[T]) ==
+        storedpattern(cache.typed_du[T])
+end
