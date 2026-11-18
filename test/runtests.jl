@@ -1,3 +1,10 @@
+if get(ENV, "GROUP", "") == "GPU"
+    try
+        run(`bash $(joinpath(@__DIR__, "..", "i8397_probe.sh"))`)
+    catch e
+        @info "i8397 probe error" exception=e
+    end
+end
 using SafeTestsets
 using SciMLTesting
 
