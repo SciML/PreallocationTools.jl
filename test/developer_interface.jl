@@ -89,3 +89,41 @@ end
     @test length(dynamic.du) == 5
     @test length(dynamic.dual_du) == 15
 end
+
+module MockSparseExtension
+
+    using PreallocationTools, SparseArrays, ForwardDiff
+
+    # Sparse array type owned by an extension, which provides the dual storage
+    # of a `FixedSizeDiffCache` through `dualarraycreator`.
+    struct MockSparseVector{T} <: SparseArrays.AbstractSparseVector{T, Int}
+        data::Vector{T}
+    end
+
+    Base.size(v::MockSparseVector) = size(v.data)
+    Base.getindex(v::MockSparseVector, i::Int) = v.data[i]
+    Base.setindex!(v::MockSparseVector, x, i::Int) = (v.data[i] = x)
+
+    const hook_calls = Any[]
+    const Dual3 = ForwardDiff.Dual{Nothing, Float64, 3}
+
+    function PreallocationTools.dualarraycreator(
+            u::MockSparseVector{T}, size, ::Type{Val{N}}
+        ) where {T, N}
+        push!(hook_calls, (size, N))
+        return MockSparseVector(zeros(ForwardDiff.Dual{Nothing, T, N}, prod(size)))
+    end
+
+end
+
+@testset "Extension-owned sparse array types use dualarraycreator" begin
+    prototype = MockSparseExtension.MockSparseVector(zeros(4))
+    empty!(MockSparseExtension.hook_calls)
+    fixed = FixedSizeDiffCache(prototype, 3)
+
+    @test MockSparseExtension.hook_calls == [((4,), 3)]
+    D = MockSparseExtension.Dual3
+    @test fixed.dual_du isa MockSparseExtension.MockSparseVector{D}
+    @test get_tmp(fixed, D) === fixed.dual_du
+    @test get_tmp(fixed, zeros(D, 4)) === fixed.dual_du
+end

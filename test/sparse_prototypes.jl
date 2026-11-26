@@ -27,6 +27,7 @@ lookup_allocs(cache, u) = (get_tmp(cache, u); @allocated get_tmp(cache, u))
 @testset "$name dual storage scales with stored entries" for (name, make_cache) in CACHE_CONSTRUCTORS
     n = 1000
     proto = bidiagonal_prototype(n)
+    proto_pattern = findnz(proto)[1:2]
     @test construction_allocs(make_cache, proto) < 20 * Base.summarysize(proto)
     cache = make_cache(proto)
     @test isempty(cache.dual_du)
@@ -47,7 +48,9 @@ lookup_allocs(cache, u) = (get_tmp(cache, u); @allocated get_tmp(cache, u))
 
     # Inserting entries into the dual workspace leaves the primal pattern intact.
     workspace[1, n] = one(D)
-    @test nnz(cache.du) == nnz(proto)
+    @test (1, n) in zip(findnz(workspace)[1:2]...)
+    @test findnz(cache.du)[1:2] == proto_pattern
+    @test findnz(proto)[1:2] == proto_pattern
     @test get_tmp(cache, D) === workspace
 end
 
@@ -105,6 +108,17 @@ end
     end
 end
 
+@testset "Three-dimensional reshape of a sparse DiffCache" begin
+    cache = DiffCache(sparse([1, 2], [1, 6], [1.0, 2.0], 2, 6))
+    D = ForwardDiff.Dual{Nothing, Float64, 2}
+    reshaped = reshape(cache, 2, 3, 2)
+    workspace = @inferred get_tmp(reshaped, D)
+    @test axes(workspace) == axes(reshaped.du)
+    @test eltype(workspace) == D
+    @test get_tmp(reshaped, D) === workspace
+    @test lookup_allocs(reshaped, D) == 0
+end
+
 @testset "zero of a sparse $name keeps the pattern" for (name, make_cache) in CACHE_CONSTRUCTORS
     proto = bidiagonal_prototype(5)
     cache = make_cache(proto)
@@ -116,6 +130,19 @@ end
     @test cache.du[2, 1] == 3.0
     D = ForwardDiff.Dual{Nothing, Float64, 2}
     @test findnz(get_tmp(zeroed, D))[1:2] == findnz(proto)[1:2]
+
+    # Wrappers keep their type and axes and get a zeroed copy of their root.
+    A = sparse([1, 2, 3], [1, 2, 3], [1.0, 2.0, 3.0])
+    for u in (view(A, 1:2, 1:2), transpose(A))
+        cache = make_cache(u)
+        zeroed = zero(cache)
+        @test zeroed.du isa typeof(cache.du)
+        @test axes(zeroed.du) == axes(u)
+        @test findnz(parent(zeroed.du))[1:2] == findnz(A)[1:2]
+        @test all(iszero, nonzeros(parent(zeroed.du)))
+        @test parent(zeroed.du) !== A
+        @test nonzeros(A) == [1.0, 2.0, 3.0]
+    end
 end
 
 @testset "Non-bits workspaces of sparse $name are zeroed" for (name, make_cache) in CACHE_CONSTRUCTORS
@@ -202,9 +229,20 @@ end
     @test parent(match!(transpose(dest), transpose(src))) === dest
     @test findnz(dest) == ([1, 3], [1, 2], [0.0, 0.0])
 
+    # Same row indices, but an entry moves to another column.
+    dest = sparse([1, 2], [1, 1], [5.0, 6.0], 2, 2)
+    @test match!(dest, sparse([1, 2], [1, 2], [1.0, 2.0], 2, 2)) === dest
+    @test findnz(dest) == ([1, 2], [1, 2], [0.0, 0.0])
+
     v = sparsevec([2], [5.0], 4)
     @test match!(v, sparsevec([1, 4], [1.0, 2.0], 4)) === v
     @test findnz(v) == ([1, 4], [0.0, 0.0])
+    # A shrinking pattern removes the entries not stored in the source.
+    @test match!(v, sparsevec([4], [3.0], 4)) === v
+    @test findnz(v) == ([4], [0.0])
+    nonzeros(v) .= 7
+    match!(v, sparsevec([4], [3.0], 4))
+    @test nonzeros(v) == [7.0]
 
     @test_throws "cannot match the stored pattern of a (3, 3) sparse matrix in one of size (2, 2)" match!(
         spzeros(2, 2), src

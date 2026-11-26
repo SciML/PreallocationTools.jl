@@ -335,6 +335,7 @@ end
     )
     n = 4
     proto = spdiagm(-1 => ones(n - 1), 0 => zeros(n))
+    proto_pattern = findnz(proto)[1:2]
     cache = make_cache(proto)
     u = rand(n)
     expected = [2 .* u[1:(n - 1)]; 0.0]
@@ -345,7 +346,8 @@ end
     bu = zeros(n)
     Enzyme.autodiff(Reverse, sparsefun, Active, Duplicated(u, bu), Const(cache))
     @test bu ≈ expected
-    @test findnz(cache.du)[1:2] == findnz(proto)[1:2]
+    @test findnz(cache.du)[1:2] == proto_pattern
+    @test findnz(proto)[1:2] == proto_pattern
 
     # Enzyme indexes the stored values of the hidden shadow of a `Const` cache
     # with positions computed from the primal's pattern, so the shadow must have
@@ -412,4 +414,28 @@ end
     # workspace, not that of the grown primal workspace.
     @test storedpattern(ext.constshadow(cache, 1, false).typed_du[T]) ==
         storedpattern(cache.typed_du[T])
+end
+
+# Writes both stored diagonal entries of a 2×2 workspace.
+function diagonalfun(x, cache)
+    P = get_tmp(cache, x)
+    P[1, 1] = x[1]^2
+    P[2, 2] = x[2]^2
+    return P[1, 1] + P[2, 2]
+end
+
+@testset "Wrapped sparse prototype, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    for u in (view(spdiagm(0 => zeros(3)), 1:2, 1:2), transpose(spdiagm(0 => zeros(2))))
+        cache = make_cache(u)
+        x = [2.0, 3.0]
+
+        d = only(Enzyme.autodiff(Forward, diagonalfun, Duplicated(x, [1.0, 0.0]), Const(cache)))
+        @test d ≈ 4
+
+        bx = zeros(2)
+        Enzyme.autodiff(Reverse, diagonalfun, Active, Duplicated(x, bx), Const(cache))
+        @test bx ≈ [4, 6]
+    end
 end
