@@ -10,6 +10,7 @@ run_tests(;
         @safetestset "DiffCache Nested Duals" include("core_nesteddual.jl")
         @safetestset "DiffCache Sparsity Support" include("sparsity_support.jl")
         @safetestset "DiffCache with SparseConnectivityTracer" include("sparse_connectivity_tracer.jl")
+        @safetestset "DiffCache with Sparse Prototypes" include("sparse_prototypes.jl")
         @safetestset "Enzyme Support" include("enzyme.jl")
         @safetestset "LazyBufferCache" include("lbc.jl")
         @safetestset "GeneralLazyBufferCache" include("general_lbc.jl")

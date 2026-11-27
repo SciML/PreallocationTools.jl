@@ -1,6 +1,6 @@
 module PreallocationToolsEnzymeCoreExt
 
-using PreallocationTools: DiffCache, FixedSizeDiffCache, LazyBufferCache, get_tmp
+using PreallocationTools: PreallocationTools, DiffCache, FixedSizeDiffCache, LazyBufferCache, get_tmp
 using EnzymeCore: EnzymeRules, Annotation, Const, Duplicated, BatchDuplicated,
     MixedDuplicated, BatchMixedDuplicated, Active
 
@@ -9,7 +9,8 @@ using EnzymeCore: EnzymeRules, Annotation, Const, Duplicated, BatchDuplicated,
 # being read, and no data stored in them is relied upon across separate calls
 # into the differentiated program. Under that contract, custom rules only need
 # to hand Enzyme a shadow buffer with the same type, shape and aliasing
-# structure as the primal buffer:
+# structure as the primal buffer (and, for sparse buffers, the same stored
+# pattern; see `matchshadow!`):
 #
 #   * If the cache itself is `Duplicated`/`BatchDuplicated` (e.g. it lives in a
 #     `Duplicated` parameter struct), the shadow cache already exists and the
@@ -56,12 +57,22 @@ shadowkey(b::LazyBufferCache) = b.bufs
 # Julia <= 1.11 (sret+returnroots CallingConventionMismatchError); inlined
 # into `constshadow` no such function exists in the module.
 @inline makeshadow(dc::DiffCache) = DiffCache(
-    zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}(), false
+    PreallocationTools._zero_primal(dc.du), zero(dc.dual_du), Dict{DataType, Any}(), false
 )
 @inline makeshadow(dc::FixedSizeDiffCache) = FixedSizeDiffCache(
-    zero(dc.du), zero(dc.dual_du), Dict{DataType, Any}()
+    PreallocationTools._zero_primal(dc.du), zero(dc.dual_du), Dict{DataType, Any}()
 )
-zeroinit!(buf) = fill!(buf, zero(eltype(buf)))
+# Called only on shadow buffers that own their storage: registry-owned shadows,
+# whose sparse roots come from `deepcopy` or `similar`, and fresh
+# `LazyBufferCache` buffers. Zeroing the stored values of a sparse root costs
+# O(stored entries), whereas `fill!` on a wrapper visits every index.
+function zeroinit!(buf)
+    return if PreallocationTools._sparse_backed(typeof(buf))
+        PreallocationTools._zero_stored!(buf)
+    else
+        fill!(buf, zero(eltype(buf)))
+    end
+end
 @inline makeshadow(b::LazyBufferCache) = LazyBufferCache(
     b.sizemap; initializer! = zeroinit!
 )
@@ -136,6 +147,26 @@ function shadowtmp(scache::LazyBufferCache, u, s = scache.sizemap(size(u)))
     return buf
 end
 
+# Enzyme indexes the stored values of a sparse shadow with positions computed
+# from the stored pattern of the primal, so the shadow buffer must have that
+# pattern, which can change between calls: entries can be stored in the primal
+# workspace outside of differentiation, and each typed workspace has the pattern
+# of the primal workspace when it was allocated. For a wrapper, the whole sparse
+# root of the shadow gets the pattern of the primal root, because Enzyme indexes
+# the root's stored values. Values of a shadow buffer whose pattern changes are
+# zeroed; like all `get_tmp` buffers, they are scratch space. Enzyme passes a
+# user-supplied shadow to the rules with the index arrays of the primal, so only
+# its stored values are its own, and a mismatch throws instead (see
+# `_match_stored_pattern!`). Registry-owned shadows and typed workspaces have
+# index arrays of their own.
+function matchshadow!(sdu, du)
+    return if PreallocationTools._sparse_backed(typeof(du))
+        PreallocationTools._match_stored_pattern!(sdu, du)
+    else
+        sdu
+    end
+end
+
 function fwdrule(config, dc, args...)
     du = primaltmp(dc.val, args...)
     if !EnzymeRules.needs_shadow(config)
@@ -145,7 +176,9 @@ function fwdrule(config, dc, args...)
     shadows = if EnzymeRules.runtime_activity(config) && runtimeinactive(dc)
         ntuple(Returns(du), Val(W))
     else
-        ntuple(i -> shadowtmp(shadowcache(dc, i, false), args...)::typeof(du), Val(W))
+        ntuple(Val(W)) do i
+            matchshadow!(shadowtmp(shadowcache(dc, i, false), args...)::typeof(du), du)
+        end
     end
     return if EnzymeRules.needs_primal(config)
         W == 1 ? Duplicated(du, shadows[1]) : BatchDuplicated(du, shadows)
@@ -178,7 +211,7 @@ function augrule(config, dc, args...)
             ntuple(Returns(du), Val(W))
         else
             ntuple(Val(W)) do i
-                sdu = shadowtmp(shadowcache(dc, i, true), args...)::typeof(du)
+                sdu = matchshadow!(shadowtmp(shadowcache(dc, i, true), args...)::typeof(du), du)
                 # Registry-owned shadows may hold stale tangents from an
                 # earlier forward-mode differentiation. Adjoint accumulation
                 # only starts in the reverse sweep, after every augmented

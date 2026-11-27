@@ -1,6 +1,7 @@
 using Enzyme
 using PreallocationTools
 using ForwardDiff
+using SparseArrays
 using Test
 
 const randmat = rand(5, 3)
@@ -318,4 +319,228 @@ end
         )
     )
     @test d2 ≈ sum(2 .* u)
+end
+
+# Writes only stored entries of the bidiagonal pattern below.
+function sparsefun(u, cache)
+    P = get_tmp(cache, u)
+    for i in firstindex(u):(lastindex(u) - 1)
+        P[i + 1, i] = u[i]^2
+    end
+    return sum(nonzeros(P))
+end
+
+@testset "Sparse prototype, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    n = 4
+    proto = spdiagm(-1 => ones(n - 1), 0 => zeros(n))
+    proto_pattern = findnz(proto)[1:2]
+    cache = make_cache(proto)
+    u = rand(n)
+    expected = [2 .* u[1:(n - 1)]; 0.0]
+
+    d = only(Enzyme.autodiff(Forward, sparsefun, Duplicated(u, ones(n)), Const(cache)))
+    @test d ≈ sum(expected)
+
+    bu = zeros(n)
+    Enzyme.autodiff(Reverse, sparsefun, Active, Duplicated(u, bu), Const(cache))
+    @test bu ≈ expected
+    @test findnz(cache.du)[1:2] == proto_pattern
+    @test findnz(proto)[1:2] == proto_pattern
+
+    # Enzyme indexes the stored values of the hidden shadow of a `Const` cache
+    # with positions computed from the primal's pattern, so the shadow must have
+    # the same stored pattern.
+    ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
+    @test findnz(ext.makeshadow(cache).du)[1:2] == findnz(proto)[1:2]
+end
+
+# Writes every stored value of the workspace, whatever its stored pattern.
+function storedfun(u, cache)
+    P = get_tmp(cache, u)
+    rows, vals = rowvals(P), nonzeros(P)
+    for j in axes(P, 2), k in nzrange(P, j)
+        vals[k] = u[rows[k]]^2
+    end
+    return sum(vals)
+end
+
+storedpattern(A) = findnz(A)[1:2]
+
+@testset "Sparse prototype with a growing stored pattern, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
+    cache = make_cache(sparse([1], [1], [0.0], 3, 3))
+    u = [1.0, 2.0, 3.0]
+
+    d = only(Enzyme.autodiff(Forward, storedfun, Duplicated(u, [1.0, 0, 0]), Const(cache)))
+    @test d ≈ 2
+
+    # Entries stored in the primal workspace between differentiations must be
+    # stored in the hidden shadow as well.
+    cache.du[3, 3] = 1
+    d = only(Enzyme.autodiff(Forward, storedfun, Duplicated(u, [0.0, 0, 1]), Const(cache)))
+    @test d ≈ 6
+    @test storedpattern(ext.constshadow(cache, 1, false).du) == storedpattern(cache.du)
+
+    cache.du[2, 1] = 1
+    bu = zeros(3)
+    Enzyme.autodiff(Reverse, storedfun, Active, Duplicated(u, bu), Const(cache))
+    @test bu ≈ [2, 4, 6]
+    @test storedpattern(ext.constshadow(cache, 1, true).du) == storedpattern(cache.du)
+end
+
+@testset "Sparse dual workspace allocated before the pattern grows, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
+    cache = make_cache(sparse([1], [1], [0.0], 3, 3))
+    w = [1.0, 2.0, 3.0]
+    inner(σ) = storedfun(σ .* w, cache)
+    fdderiv(σ) = ForwardDiff.derivative(inner, σ)
+
+    # Allocates the dual workspace with the stored pattern {(1, 1)}.
+    @test fdderiv(0.5) ≈ w[1]^2
+    cache.du[3, 3] = 1
+    T = only(keys(cache.typed_du))
+
+    d2 = only(
+        Enzyme.autodiff(set_runtime_activity(Forward), Const(fdderiv), Duplicated(0.5, 1.0))
+    )
+    @test d2 ≈ 2 * w[1]^2
+    # The shadow of the dual workspace has the stored pattern of the primal dual
+    # workspace, not that of the grown primal workspace.
+    @test storedpattern(ext.constshadow(cache, 1, false).typed_du[T]) ==
+        storedpattern(cache.typed_du[T])
+end
+
+# Writes both stored diagonal entries of a 2×2 workspace.
+function diagonalfun(x, cache)
+    P = get_tmp(cache, x)
+    P[1, 1] = x[1]^2
+    P[2, 2] = x[2]^2
+    return P[1, 1] + P[2, 2]
+end
+
+@testset "Wrapped sparse prototype, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    for u in (view(spdiagm(0 => zeros(3)), 1:2, 1:2), transpose(spdiagm(0 => zeros(2))))
+        cache = make_cache(u)
+        x = [2.0, 3.0]
+
+        d = only(Enzyme.autodiff(Forward, diagonalfun, Duplicated(x, [1.0, 0.0]), Const(cache)))
+        @test d ≈ 4
+
+        bx = zeros(2)
+        Enzyme.autodiff(Reverse, diagonalfun, Active, Duplicated(x, bx), Const(cache))
+        @test bx ≈ [4, 6]
+    end
+end
+
+# Writes both stored entries of a length-4 sparse vector stored at indices 1 and 3.
+function sparsevecfun(x, cache)
+    P = get_tmp(cache, x)
+    P[1] = x[1]^2
+    P[3] = x[2]^2
+    return P[1] + P[3]
+end
+
+@testset "Sparse vector prototype with unassigned stored values, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    unassigned_proto() = similar(sparsevec([1, 3], [0.0, 0.0], 4), Real)
+    x = [2.0, 3.0]
+
+    proto = unassigned_proto()
+    @test !any(i -> isassigned(nonzeros(proto), i), eachindex(nonzeros(proto)))
+    cache = make_cache(proto)
+    d = only(Enzyme.autodiff(Forward, sparsevecfun, Duplicated(x, [1.0, 0.0]), Const(cache)))
+    @test d ≈ 4
+
+    proto = unassigned_proto()
+    @test !any(i -> isassigned(nonzeros(proto), i), eachindex(nonzeros(proto)))
+    cache = make_cache(proto)
+    bx = zeros(2)
+    Enzyme.autodiff(Reverse, sparsevecfun, Active, Duplicated(x, bx), Const(cache))
+    @test bx ≈ [4, 6]
+end
+
+const STALE_SHADOW = "entries were stored in the workspace after the shadow was created"
+
+@testset "Sparse shadow created before the stored pattern grows, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    u = [1.0, 2.0, 3.0]
+    for make_shadow in (Enzyme.make_zero, zero)
+        cache = make_cache(sparse([1], [1], [0.0], 3, 3))
+        shadow = make_shadow(cache)
+        d = only(Enzyme.autodiff(Forward, storedfun, Duplicated(u, [1.0, 0, 0]), Duplicated(cache, shadow)))
+        @test d ≈ 2
+
+        cache.du[3, 3] = 1
+        @test_throws STALE_SHADOW Enzyme.autodiff(
+            Forward, storedfun, Duplicated(u, [0.0, 0, 1]), Duplicated(cache, shadow)
+        )
+        bu = zeros(3)
+        @test_throws STALE_SHADOW Enzyme.autodiff(
+            Reverse, storedfun, Active, Duplicated(u, bu), Duplicated(cache, shadow)
+        )
+        # The shadow is left as it was.
+        @test length(nonzeros(shadow.du)) == 1
+
+        shadow = make_shadow(cache)
+        d = only(Enzyme.autodiff(Forward, storedfun, Duplicated(u, [0.0, 0, 1]), Duplicated(cache, shadow)))
+        @test d ≈ 6
+        Enzyme.autodiff(Reverse, storedfun, Active, Duplicated(u, bu), Duplicated(cache, make_shadow(cache)))
+        @test bu ≈ [2, 0, 6]
+    end
+end
+
+@testset "Wrapped sparse shadow created before the stored pattern grows, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    # (1, 1) lies in the 2×2 view; (3, 2) lies outside of it.
+    P = sparse([1, 3], [1, 2], [0.0, 5.0], 3, 2)
+    cache = make_cache(view(P, 1:2, :))
+    shadow = make_cache(view(copy(P), 1:2, :))
+    dP = parent(shadow.du)
+    nonzeros(dP) .= [0.0, 7.0]
+    parent(cache.du)[2, 2] = 1
+    x = [2.0, 3.0]
+    @test_throws STALE_SHADOW Enzyme.autodiff(
+        Reverse, diagonalfun, Active, Duplicated(x, zeros(2)), Duplicated(cache, shadow)
+    )
+    @test copy(dP) == sparse([1, 3], [1, 2], [0.0, 7.0], 3, 2)
+
+    bx = zeros(2)
+    Enzyme.autodiff(Reverse, diagonalfun, Active, Duplicated(x, bx), Duplicated(cache, zero(cache)))
+    @test bx ≈ [4, 6]
+end
+
+@testset "Copies of wrapped sparse caches as shadows, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    for u in (view(spdiagm(0 => zeros(3)), 1:2, 1:2), transpose(spdiagm(0 => zeros(2))))
+        cache = make_cache(u)
+        x = [2.0, 3.0]
+        for shadow in (copy(cache), zero(cache))
+            d = only(Enzyme.autodiff(Forward, diagonalfun, Duplicated(x, [1.0, 0.0]), Duplicated(cache, shadow)))
+            @test d ≈ 4
+        end
+    end
+end
+
+@testset "zeroinit! of sparse-backed shadows keeps the stored pattern" begin
+    ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
+    S = sparse([1, 2, 4], [1, 3, 4], [1.0, 2.0, 3.0], 4, 4)
+    pattern = findnz(S)[1:2]
+    for buf in (S, reshape(S, 2, 8), transpose(S), view(S, :, 2:4))
+        nonzeros(S) .= 1
+        @test ext.zeroinit!(buf) === buf
+        @test findnz(S)[1:2] == pattern
+        @test all(iszero, nonzeros(S))
+    end
 end
