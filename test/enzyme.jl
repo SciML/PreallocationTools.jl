@@ -439,3 +439,31 @@ end
         @test bx ≈ [4, 6]
     end
 end
+
+# Writes both stored entries of a length-4 sparse vector stored at indices 1 and 3.
+function sparsevecfun(x, cache)
+    P = get_tmp(cache, x)
+    P[1] = x[1]^2
+    P[3] = x[2]^2
+    return P[1] + P[3]
+end
+
+@testset "Sparse vector prototype with unassigned stored values, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    unassigned_proto() = similar(sparsevec([1, 3], [0.0, 0.0], 4), Real)
+    x = [2.0, 3.0]
+
+    proto = unassigned_proto()
+    @test !any(i -> isassigned(nonzeros(proto), i), eachindex(nonzeros(proto)))
+    cache = make_cache(proto)
+    d = only(Enzyme.autodiff(Forward, sparsevecfun, Duplicated(x, [1.0, 0.0]), Const(cache)))
+    @test d ≈ 4
+
+    proto = unassigned_proto()
+    @test !any(i -> isassigned(nonzeros(proto), i), eachindex(nonzeros(proto)))
+    cache = make_cache(proto)
+    bx = zeros(2)
+    Enzyme.autodiff(Reverse, sparsevecfun, Active, Duplicated(x, bx), Const(cache))
+    @test bx ≈ [4, 6]
+end

@@ -250,4 +250,23 @@ end
     @test_throws "cannot match the stored pattern of a sparse vector of length 4 in one of length 3" match!(
         spzeros(3), sparsevec([1], [1.0], 4)
     )
+
+    # Stored values may be unassigned until the caller writes them.
+    unassigned = similar(sparsevec([1, 3], [0.0, 0.0], 4), Real)
+    @test !isassigned(nonzeros(unassigned), 1)
+    dest = similar(unassigned)
+    @test match!(dest, unassigned) === dest
+    @test !isassigned(nonzeros(dest), 1)
+    dest = sparsevec([2], Real[5.0], 4)
+    @test match!(dest, unassigned) === dest
+    @test findnz(dest) == ([1, 3], [0, 0])
+
+    match_allocs(dest, src) = (match!(dest, src); @allocated match!(dest, src))
+    @testset "Unchanged patterns of $n stored entries match without allocating" for n in (10, 10_000)
+        v = sparsevec(1:2:(2n), ones(n), 2n)
+        A = sparse(1:n, 1:n, ones(n))
+        @test match_allocs(copy(v), v) == 0
+        @test match_allocs(copy(A), A) == 0
+        @test match_allocs(transpose(copy(A)), transpose(A)) == 0
+    end
 end

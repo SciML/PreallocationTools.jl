@@ -1,7 +1,7 @@
 module PreallocationToolsSparseArraysExt
 
 using PreallocationTools: PreallocationTools
-using SparseArrays: SparseMatrixCSC, SparseVector, findnz, nnz, nonzeros, nzrange, rowvals
+using SparseArrays: SparseMatrixCSC, SparseVector, nonzeros, nzrange, rowvals
 
 const SparseCSC = Union{SparseMatrixCSC, SparseVector}
 
@@ -76,9 +76,9 @@ function _same_stored_pattern(dest::SparseMatrixCSC, src::SparseMatrixCSC)
     end
     return rowvals(dest) == rowvals(src)
 end
-function _same_stored_pattern(dest::SparseVector, src::SparseVector)
-    return nnz(dest) == nnz(src) && first(findnz(dest)) == first(findnz(src))
-end
+# Compares only the stored indices: the stored values of a workspace may be
+# unassigned references until the caller writes them.
+_same_stored_pattern(dest::SparseVector, src::SparseVector) = rowvals(dest) == rowvals(src)
 
 # `copyto!` between sparse arrays of equal size copies the stored pattern,
 # including stored zeros, and removes entries stored only in `dest`.
