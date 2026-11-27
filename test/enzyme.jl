@@ -467,3 +467,80 @@ end
     Enzyme.autodiff(Reverse, sparsevecfun, Active, Duplicated(x, bx), Const(cache))
     @test bx ≈ [4, 6]
 end
+
+const STALE_SHADOW = "entries were stored in the workspace after the shadow was created"
+
+@testset "Sparse shadow created before the stored pattern grows, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    u = [1.0, 2.0, 3.0]
+    for make_shadow in (Enzyme.make_zero, zero)
+        cache = make_cache(sparse([1], [1], [0.0], 3, 3))
+        shadow = make_shadow(cache)
+        d = only(Enzyme.autodiff(Forward, storedfun, Duplicated(u, [1.0, 0, 0]), Duplicated(cache, shadow)))
+        @test d ≈ 2
+
+        cache.du[3, 3] = 1
+        @test_throws STALE_SHADOW Enzyme.autodiff(
+            Forward, storedfun, Duplicated(u, [0.0, 0, 1]), Duplicated(cache, shadow)
+        )
+        bu = zeros(3)
+        @test_throws STALE_SHADOW Enzyme.autodiff(
+            Reverse, storedfun, Active, Duplicated(u, bu), Duplicated(cache, shadow)
+        )
+        # The shadow is left as it was.
+        @test length(nonzeros(shadow.du)) == 1
+
+        shadow = make_shadow(cache)
+        d = only(Enzyme.autodiff(Forward, storedfun, Duplicated(u, [0.0, 0, 1]), Duplicated(cache, shadow)))
+        @test d ≈ 6
+        Enzyme.autodiff(Reverse, storedfun, Active, Duplicated(u, bu), Duplicated(cache, make_shadow(cache)))
+        @test bu ≈ [2, 0, 6]
+    end
+end
+
+@testset "Wrapped sparse shadow created before the stored pattern grows, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    # (1, 1) lies in the 2×2 view; (3, 2) lies outside of it.
+    P = sparse([1, 3], [1, 2], [0.0, 5.0], 3, 2)
+    cache = make_cache(view(P, 1:2, :))
+    shadow = make_cache(view(copy(P), 1:2, :))
+    dP = parent(shadow.du)
+    nonzeros(dP) .= [0.0, 7.0]
+    parent(cache.du)[2, 2] = 1
+    x = [2.0, 3.0]
+    @test_throws STALE_SHADOW Enzyme.autodiff(
+        Reverse, diagonalfun, Active, Duplicated(x, zeros(2)), Duplicated(cache, shadow)
+    )
+    @test copy(dP) == sparse([1, 3], [1, 2], [0.0, 7.0], 3, 2)
+
+    bx = zeros(2)
+    Enzyme.autodiff(Reverse, diagonalfun, Active, Duplicated(x, bx), Duplicated(cache, zero(cache)))
+    @test bx ≈ [4, 6]
+end
+
+@testset "Copies of wrapped sparse caches as shadows, $name" for (name, make_cache) in (
+        ("DiffCache", DiffCache), ("FixedSizeDiffCache", FixedSizeDiffCache),
+    )
+    for u in (view(spdiagm(0 => zeros(3)), 1:2, 1:2), transpose(spdiagm(0 => zeros(2))))
+        cache = make_cache(u)
+        x = [2.0, 3.0]
+        for shadow in (copy(cache), zero(cache))
+            d = only(Enzyme.autodiff(Forward, diagonalfun, Duplicated(x, [1.0, 0.0]), Duplicated(cache, shadow)))
+            @test d ≈ 4
+        end
+    end
+end
+
+@testset "zeroinit! of sparse-backed shadows keeps the stored pattern" begin
+    ext = Base.get_extension(PreallocationTools, :PreallocationToolsEnzymeCoreExt)
+    S = sparse([1, 2, 4], [1, 3, 4], [1.0, 2.0, 3.0], 4, 4)
+    pattern = findnz(S)[1:2]
+    for buf in (S, reshape(S, 2, 8), transpose(S), view(S, :, 2:4))
+        nonzeros(S) .= 1
+        @test ext.zeroinit!(buf) === buf
+        @test findnz(S)[1:2] == pattern
+        @test all(iszero, nonzeros(S))
+    end
+end

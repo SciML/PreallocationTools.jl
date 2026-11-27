@@ -85,7 +85,9 @@ end
         @test isempty(cache.dual_du)
         for T in (D, BigFloat)
             workspace = @inferred get_tmp(cache, T)
-            @test workspace isa SparseMatrixCSC{T}
+            # A reshape gets the reshaped workspace of its parent.
+            root = u isa Base.ReshapedArray ? parent(workspace) : workspace
+            @test root isa SparseMatrixCSC{T}
             @test size(workspace) == size(u)
             workspace[1, 1] = one(T)
             @test get_tmp(cache, T) === workspace
@@ -105,7 +107,28 @@ end
         @test size(reshaped_workspace) == (3, 4)
         @test get_tmp(reshaped, T) === reshaped_workspace
         @test get_tmp(cache, T) === workspace
+        @test parent(reshaped_workspace) === workspace
+        @test lookup_allocs(reshaped, T) == 0
     end
+end
+
+@testset "Reshapes of a sparse DiffCache share workspaces" begin
+    D = ForwardDiff.Dual{Nothing, Float64, 2}
+    v = sparsevec([2, 7], [1.0, 2.0], 12)
+    for u in (bidiagonal_prototype(6), view(bidiagonal_prototype(6), 1:4, :), v, transpose(bidiagonal_prototype(6)))
+        cache = DiffCache(u)
+        # Allocated first through a reshape, then fetched by the parent cache.
+        reshaped = reshape(cache, 2, 3, length(u) ÷ 6)
+        workspace = @inferred get_tmp(reshaped, D)
+        @test size(workspace) == size(reshaped.du)
+        @test get_tmp(reshape(cache, size(reshaped.du)), D) == workspace
+        root = get_tmp(cache, D)
+        @test size(root) == size(u)
+        root[firstindex(root)] = one(D)
+        @test workspace[firstindex(workspace)] == one(D)
+        @test lookup_allocs(reshape(cache, length(u)), D) == 0
+    end
+    @test findnz(parent(parent(get_tmp(reshape(DiffCache(v), 3, 4), D))))[1] == [2, 7]
 end
 
 @testset "Three-dimensional reshape of a sparse DiffCache" begin
@@ -115,6 +138,9 @@ end
     workspace = @inferred get_tmp(reshaped, D)
     @test axes(workspace) == axes(reshaped.du)
     @test eltype(workspace) == D
+    # Sparse storage with the stored pattern of the parent.
+    @test parent(workspace) isa SparseMatrixCSC{D, Int}
+    @test findnz(parent(workspace))[1:2] == ([1, 2], [1, 6])
     @test get_tmp(reshaped, D) === workspace
     @test lookup_allocs(reshaped, D) == 0
 end
@@ -142,6 +168,23 @@ end
         @test all(iszero, nonzeros(parent(zeroed.du)))
         @test parent(zeroed.du) !== A
         @test nonzeros(A) == [1.0, 2.0, 3.0]
+    end
+end
+
+@testset "copy of a sparse $name keeps the wrapper and pattern" for (name, make_cache) in CACHE_CONSTRUCTORS
+    A = sparse([1, 2, 3], [1, 2, 3], [1.0, 0.0, 3.0])
+    D = ForwardDiff.Dual{Nothing, Float64, 2}
+    for u in (A, view(A, 1:2, 1:2), transpose(A), PermutedDimsArray(A, (2, 1)))
+        cache = make_cache(u)
+        workspace = get_tmp(cache, D)
+        copied = copy(cache)
+        @test copied.du isa typeof(cache.du)
+        @test copied.du == cache.du
+        root = u === A ? copied.du : parent(copied.du)
+        @test findnz(root) == findnz(A)
+        @test root !== A
+        @test get_tmp(copied, D) isa typeof(workspace)
+        @test get_tmp(copied, D) !== workspace
     end
 end
 
@@ -176,6 +219,23 @@ end
     fill!(cache, 1.0)
     @test nnz(workspace) == n^2
     @test all(isone, workspace)
+
+    # Also for sparsity tracers, without testing the converted value for zero.
+    cache = make_cache(proto)
+    jacobian_sparsity(
+        (du, u) -> rhs!(du, u, cache), zeros(n), rand(n), TracerSparsityDetector()
+    )
+    tracer_workspace = only(values(cache.typed_du))
+    @test fill!(cache, 1.0) === cache
+    @test nnz(tracer_workspace) == n^2
+    @test findnz(tracer_workspace)[1:2] == findnz(sparse(ones(n, n)))[1:2]
+
+    v = sparsevec([2, 5], [1.0, 2.0], n)
+    cache = make_cache(v)
+    tracer_workspace = get_tmp(cache, eltype(tracer_workspace))
+    fill!(cache, 1.0)
+    @test findnz(tracer_workspace)[1] == 1:n
+    @test all(isone, cache.du)
 end
 
 @testset "resize! of a sparse $name" for (name, make_cache) in CACHE_CONSTRUCTORS
@@ -229,6 +289,11 @@ end
     @test parent(match!(transpose(dest), transpose(src))) === dest
     @test findnz(dest) == ([1, 3], [1, 2], [0.0, 0.0])
 
+    # A view matches the whole root.
+    dest = sparse([1, 2], [1, 3], [5.0, 6.0], 3, 3)
+    @test parent(match!(view(dest, 1:2, 1:2), view(src, 1:2, 1:2))) === dest
+    @test findnz(dest) == ([1, 3], [1, 2], [0.0, 0.0])
+
     # Same row indices, but an entry moves to another column.
     dest = sparse([1, 2], [1, 1], [5.0, 6.0], 2, 2)
     @test match!(dest, sparse([1, 2], [1, 2], [1.0, 2.0], 2, 2)) === dest
@@ -260,6 +325,21 @@ end
     dest = sparsevec([2], Real[5.0], 4)
     @test match!(dest, unassigned) === dest
     @test findnz(dest) == ([1, 3], [0, 0])
+
+    # Index arrays shared with the source (as from `Enzyme.make_zero`) see the
+    # entries stored in the source later, but the stored values do not.
+    msg = "the shadow of a sparse workspace has 2 stored values, but the workspace has 3 stored entries"
+    A = sparse([1, 2], [1, 2], [1.0, 2.0], 3, 3)
+    dest = SparseMatrixCSC(3, 3, A.colptr, A.rowval, [5.0, 6.0])
+    @test match!(dest, A) === dest
+    @test nonzeros(dest) == [5.0, 6.0]
+    A[3, 3] = 3.0
+    @test_throws msg match!(dest, A)
+    @test nonzeros(dest) == [5.0, 6.0]
+    v = sparsevec([1, 2], [1.0, 2.0], 3)
+    dest = SparseVector(3, v.nzind, [5.0, 6.0])
+    v[3] = 3.0
+    @test_throws msg match!(dest, v)
 
     match_allocs(dest, src) = (match!(dest, src); @allocated match!(dest, src))
     @testset "Unchanged patterns of $n stored entries match without allocating" for n in (10, 10_000)

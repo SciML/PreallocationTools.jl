@@ -22,13 +22,16 @@ advance and the cache size does not need to grow during differentiation.
 For `SparseMatrixCSC` and `SparseVector` prototypes, including views, reshapes,
 and transposes of them, `dual_du` is empty and the chunk size is not used. The
 workspace for each dual type is allocated with `similar` on the first `get_tmp`
-call for that type. When `similar` produces a sparse array, the workspace uses
-sparse storage, so the memory scales with the number of stored entries;
-reshapes to more than two dimensions may get a dense workspace. For
-`SparseMatrixCSC` and `SparseVector` prototypes, the workspace has the stored
-pattern that the primal workspace `du` has at that call; entries stored in `du`
-later are not added to it. Other sparse array types use
-[`dualarraycreator`](@ref) like dense arrays.
+call for that type; for a reshape, `similar` is applied to its parent and the
+workspace is reshaped. When `similar` produces a sparse array, the workspace
+uses sparse storage, so the memory scales with the number of stored entries.
+For `SparseMatrixCSC` and `SparseVector` prototypes and reshapes of them, the
+workspace has the stored pattern that the primal workspace `du` has at that
+call; entries stored in `du` later are not added to it. `zero` and `copy` of a
+cache, as well as the shadow caches used by Enzyme, copy the whole sparse array
+underlying a view, because Enzyme requires shadows with the stored pattern of
+that array. Other sparse array types use [`dualarraycreator`](@ref) like dense
+arrays.
 
 For vector-backed caches, `resize!(cache, n)` resizes the primal, dual, and
 nested-dual scratch storage and returns `cache`. Resizing a cache whose primal
@@ -265,12 +268,15 @@ algorithms are expected to resize the cache.
 
 For `SparseMatrixCSC` and `SparseVector` prototypes, including views, reshapes,
 and transposes of them, `dual_du` is empty and the workspaces for other element
-types are allocated with `similar` on first use. When `similar` produces a
+types are allocated with `similar` on first use; for a reshape, `similar` is
+applied to its parent and the workspace is reshaped. When `similar` produces a
 sparse array, the workspace uses sparse storage, so the memory scales with the
-number of stored entries; reshapes to more than two dimensions may get a dense
-workspace. For `SparseMatrixCSC` and `SparseVector` prototypes, each workspace
-has the stored pattern that the primal workspace `du` has when that workspace
-is allocated; entries stored in `du` later are not added to it.
+number of stored entries. For `SparseMatrixCSC` and `SparseVector` prototypes
+and reshapes of them, each workspace has the stored pattern that the primal
+workspace `du` has when that workspace is allocated; entries stored in `du`
+later are not added to it. `zero` and `copy` of a cache, as well as the shadow
+caches used by Enzyme, copy the whole sparse array underlying a view, because
+Enzyme requires shadows with the stored pattern of that array.
 
 For vector-backed caches, `resize!(cache, n)` resizes the primal and
 nested-dual scratch storage while preserving the current dual-storage capacity
@@ -340,13 +346,45 @@ function _sparse_backed(::Type{A}) where {A}
 end
 
 # Provided by the SparseArrays extension; called only for sparse-backed arrays.
-function _shaped_typed_tmp end
 function _fill_stored! end
+function _fill_entries! end
 function _match_stored_pattern! end
+
+# Persistent workspace of a sparse-backed cache for element type `T`, allocated
+# with `similar`, so memory scales with the number of stored entries whenever
+# `similar` returns a sparse array. A reshaped `du` uses the workspace of its
+# parent, reshaped the same way, so the caches returned by `reshape(dc, dims)`
+# share their workspaces with `dc` (and with each other).
+function _shaped_typed_tmp(dc, ::Type{T}) where {T}
+    proto = _workspace_prototype(dc.du)
+    buf = get(dc.typed_du, T, nothing)
+    if buf === nothing
+        buf = dc.typed_du[T] = _zero_stored!(similar(proto, T))
+    end
+    return _reshape_workspace(buf::_workspace_type(proto, T), dc.du)
+end
+
+# The array whose shape the stored workspaces have; inverts `_resizeable_reshape`.
+_workspace_prototype(du) = du
+_workspace_prototype(du::Base.ReshapedArray) = _unslice(parent(du))
+_unslice(a) = a
+_unslice(a::SubArray{<:Any, 1, <:AbstractVector, <:Tuple{Base.Slice}}) = parent(a)
+
+_reshape_workspace(buf, du) = buf
+_reshape_workspace(buf, du::Base.ReshapedArray) = _resizeable_reshape(buf, size(du))
+
+# The compiler resolves this to a constant, and `:removable` lets it delete the
+# runtime allocation (same pattern as `_typed_buffer_type`). The SparseArrays
+# extension adds methods that avoid calling `similar`.
+Base.@assume_effects :removable function _workspace_type(du::AbstractArray, ::Type{T}) where {T}
+    return typeof(similar(du, T))
+end
 
 # Primal workspace of `zero(cache)`. `zero` of a sparse array drops its stored
 # pattern and unwraps views, reshapes, and transposes, so sparse-backed arrays
 # are copied, including their sparse root, and their stored values are zeroed.
+# The copy of the root is required for Enzyme shadows, whose stored values
+# Enzyme indexes with positions in the stored pattern of the primal root.
 function _zero_primal(du)
     return if _sparse_backed(typeof(du))
         _zero_stored!(deepcopy(du))
@@ -354,6 +392,10 @@ function _zero_primal(du)
         zero(du)
     end
 end
+
+# Primal workspace of `copy(cache)`; like `_zero_primal`, keeps the wrapper type
+# and the stored pattern of sparse-backed arrays.
+_copy_primal(du) = _sparse_backed(typeof(du)) ? deepcopy(du) : copy(du)
 
 # Stored values from `similar` are uninitialized, and sparse operations read them.
 _zero_stored!(buf) = _fill_stored!(buf, zero(eltype(buf)))
@@ -465,15 +507,12 @@ dimensions. The returned cache shares the normal cache storage with `dc`; the
 raw dual cache storage remains vector-backed so `get_tmp` can reinterpret it for
 the requested automatic differentiation element type.
 
-For sparse caches, the workspaces for other element types have the shape of the
-cache they belong to, so the returned cache allocates its own with `similar`.
-Reshapes to more than two dimensions may allocate dense workspaces.
+For sparse caches, the returned cache also shares the workspaces for other
+element types with `dc`; `get_tmp` returns them reshaped to `dims`.
 """
 function Base.reshape(dc::DiffCache, dims::Tuple{Vararg{Integer}})
     shape = map(Int, dims)
-    # Flat typed buffers fit any shape of `du`; shaped ones fit only their own.
-    typed_du = _flat_dual_storage(dc.du) ? dc.typed_du : Dict{DataType, Any}()
-    return DiffCache(_resizeable_reshape(dc.du, shape), dc.dual_du, typed_du, dc.warn_on_resize)
+    return DiffCache(_resizeable_reshape(dc.du, shape), dc.dual_du, dc.typed_du, dc.warn_on_resize)
 end
 
 Base.reshape(dc::DiffCache, dims::Integer...) = reshape(dc, dims)
@@ -888,15 +927,15 @@ end
 # copy dispatches for PreallocationTools types
 function Base.copy(dc::DiffCache)
     return DiffCache(
-        copy(dc.du), copy(dc.dual_du),
-        Dict{DataType, Any}(k => copy(v) for (k, v) in dc.typed_du), dc.warn_on_resize
+        _copy_primal(dc.du), copy(dc.dual_du),
+        Dict{DataType, Any}(k => _copy_primal(v) for (k, v) in dc.typed_du), dc.warn_on_resize
     )
 end
 
 function Base.copy(dc::FixedSizeDiffCache)
     return FixedSizeDiffCache(
-        copy(dc.du), copy(dc.dual_du),
-        Dict{DataType, Any}(k => copy(v) for (k, v) in dc.typed_du)
+        _copy_primal(dc.du), copy(dc.dual_du),
+        Dict{DataType, Any}(k => _copy_primal(v) for (k, v) in dc.typed_du)
     )
 end
 
@@ -945,16 +984,13 @@ function _fill_typed!(typed_du::Dict{DataType, Any}, val)
     return typed_du
 end
 
-# Filling a sparse array with zero keeps its stored pattern. Sparse workspaces
-# test `val` rather than their own element type for zero, because `fill!` on a
-# sparse array calls `iszero` on its element type, which for sparsity tracers
-# does not return a `Bool`.
+# Filling a sparse array with zero keeps its stored pattern, and filling it with
+# a nonzero value stores every entry. Sparse workspaces test `val` rather than
+# `convert(eltype(buf), val)` for zero, because `fill!` on a sparse array tests
+# the converted value, and for sparsity tracers that test does not return a `Bool`.
 function _fill_workspace!(buf, val)
-    return if _sparse_backed(typeof(buf)) && iszero(val)
-        _fill_stored!(buf, val)
-    else
-        fill!(buf, val)
-    end
+    _sparse_backed(typeof(buf)) || return fill!(buf, val)
+    return iszero(val) ? _fill_stored!(buf, val) : _fill_entries!(buf, val)
 end
 
 """

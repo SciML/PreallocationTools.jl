@@ -62,7 +62,17 @@ shadowkey(b::LazyBufferCache) = b.bufs
 @inline makeshadow(dc::FixedSizeDiffCache) = FixedSizeDiffCache(
     PreallocationTools._zero_primal(dc.du), zero(dc.dual_du), Dict{DataType, Any}()
 )
-zeroinit!(buf) = fill!(buf, zero(eltype(buf)))
+# Called only on shadow buffers that own their storage: registry-owned shadows,
+# whose sparse roots come from `deepcopy` or `similar`, and fresh
+# `LazyBufferCache` buffers. Zeroing the stored values of a sparse root costs
+# O(stored entries), whereas `fill!` on a wrapper visits every index.
+function zeroinit!(buf)
+    return if PreallocationTools._sparse_backed(typeof(buf))
+        PreallocationTools._zero_stored!(buf)
+    else
+        fill!(buf, zero(eltype(buf)))
+    end
+end
 @inline makeshadow(b::LazyBufferCache) = LazyBufferCache(
     b.sizemap; initializer! = zeroinit!
 )
@@ -141,8 +151,14 @@ end
 # from the stored pattern of the primal, so the shadow buffer must have that
 # pattern, which can change between calls: entries can be stored in the primal
 # workspace outside of differentiation, and each typed workspace has the pattern
-# of the primal workspace when it was allocated. Values of a shadow buffer whose
-# pattern changes are zeroed; like all `get_tmp` buffers, they are scratch space.
+# of the primal workspace when it was allocated. For a wrapper, the whole sparse
+# root of the shadow gets the pattern of the primal root, because Enzyme indexes
+# the root's stored values. Values of a shadow buffer whose pattern changes are
+# zeroed; like all `get_tmp` buffers, they are scratch space. Enzyme passes a
+# user-supplied shadow to the rules with the index arrays of the primal, so only
+# its stored values are its own, and a mismatch throws instead (see
+# `_match_stored_pattern!`). Registry-owned shadows and typed workspaces have
+# index arrays of their own.
 function matchshadow!(sdu, du)
     return if PreallocationTools._sparse_backed(typeof(du))
         PreallocationTools._match_stored_pattern!(sdu, du)
