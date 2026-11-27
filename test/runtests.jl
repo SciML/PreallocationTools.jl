@@ -1,3 +1,10 @@
+# Enzyme 0.13.219+ breaks nested forward custom rules on Julia 1.10
+# (EnzymeAD/Enzyme.jl#4005). Newer Julia versions need its newer Enzyme_jll.
+if VERSION < v"1.11"
+    Pkg = Base.require(Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg"))
+    Pkg.pin(Pkg.PackageSpec(name = "Enzyme", version = v"0.13.218"))
+end
+
 using SafeTestsets
 using SciMLTesting
 
