@@ -1,8 +1,24 @@
+import Pkg
+import TOML
+
 using SafeTestsets
 using SciMLTesting
 
+# Enzyme 0.13.219+ breaks nested forward custom rules on Julia 1.10 (EnzymeAD/Enzyme.jl#4005).
+function _pin_enzyme_for_lts!()
+    VERSION < v"1.11" || return nothing
+    enzyme = Base.locate_package(
+        Base.PkgId(Base.UUID("7da242da-08ed-463a-9acd-ee780be4f1d9"), "Enzyme")
+    )
+    project = TOML.parsefile(joinpath(dirname(dirname(enzyme)), "Project.toml"))
+    VersionNumber(project["version"]) >= v"0.13.219" || return nothing
+    Pkg.pin(Pkg.PackageSpec(name = "Enzyme", version = v"0.13.218"))
+    return nothing
+end
+
 run_tests(;
     core = () -> begin
+        _pin_enzyme_for_lts!()
         @safetestset "Developer Interface" include("developer_interface.jl")
         @safetestset "DiffCache Dispatch" include("core_dispatch.jl")
         @safetestset "DiffCache ODE tests" include("core_odes.jl")
