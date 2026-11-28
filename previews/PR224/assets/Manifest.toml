@@ -2,7 +2,7 @@
 
 julia_version = "1.13.4"
 manifest_format = "2.1"
-project_hash = "9541b1b236c12f3d6526cfcadab118bba39ae673"
+project_hash = "88316a330a2806a9f03d1628ed46f8cc03336477"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -307,7 +307,7 @@ weakdeps = ["REPL"]
 
 [[deps.PreallocationTools]]
 deps = ["Adapt", "ArrayInterface", "PrecompileTools", "SciMLPublic"]
-path = "/home/runner/work/PreallocationTools.jl/PreallocationTools.jl"
+path = "/home/runner/_work/PreallocationTools.jl/PreallocationTools.jl"
 uuid = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 version = "1.7.1"
 
