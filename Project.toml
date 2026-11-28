@@ -32,6 +32,7 @@ Optimization = "5"
 OptimizationOptimJL = "0.4.13"
 OrdinaryDiffEq = "7"
 OrdinaryDiffEqSDIRK = "2"
+Pkg = "1.10"
 SciMLBase = "3"
 SciMLPublic = "1"
 SciMLTesting = "2.4"
@@ -44,6 +45,7 @@ SparseArrays = "1.10"
 SparseConnectivityTracer = "1"
 Symbolics = "7.39.2"
 Test = "1.10"
+TOML = "1.0.3"
 julia = "1.10"
 
 [extras]
@@ -57,6 +59,7 @@ Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 OrdinaryDiffEqSDIRK = "2d112036-d095-4a1e-ab9a-08536f3ecdbf"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 SciMLTesting = "09d9d899-5365-40a9-917a-5f67fddea283"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -67,6 +70,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SparseConnectivityTracer = "9f842d2f-2579-4b1d-911e-f412cf18a3f5"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [targets]
-test = ["ADTypes", "Enzyme", "ForwardDiff", "Random", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "OrdinaryDiffEqSDIRK", "SciMLBase", "SciMLTesting", "Test", "RecursiveArrayTools", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SparseArrays", "Symbolics", "SparseConnectivityTracer"]
+test = ["ADTypes", "Enzyme", "ForwardDiff", "Random", "LabelledArrays", "LinearAlgebra", "OrdinaryDiffEq", "OrdinaryDiffEqSDIRK", "SciMLBase", "SciMLTesting", "Test", "Pkg", "TOML", "RecursiveArrayTools", "SafeTestsets", "Optimization", "OptimizationOptimJL", "SparseArrays", "Symbolics", "SparseConnectivityTracer"]
